@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a0e1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="OilSense">
+  <title>OilSense - エンジンオイル劣化判定</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    :root {
+      --bg:     #0a0e1a;
+      --bg2:    #141929;
+      --bg3:    #1e2640;
+      --accent: #4fc3f7;
+      --green:  #66bb6a;
+      --red:    #f44336;
+      --text:   #e0e8ff;
+      --text2:  #8899bb;
+      --border: #2a3555;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 480px; margin: 0 auto; min-height: 100%;
+      display: flex; flex-direction: column;
+    }
+
+    /* HEADER */
+    .header {
+      background: var(--bg2); padding: 13px 16px 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    }
+    .header-icon { font-size: 24px; }
+    .header-title { font-size: 18px; font-weight: 800; color: var(--accent); }
+    .header-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
+
+    /* TABS */
+    .tabs {
+      background: var(--bg2); display: flex;
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .tab {
+      flex: 1; padding: 8px 2px 6px; text-align: center;
+      font-size: 10px; color: var(--text2); cursor: pointer;
+      border-bottom: 2px solid transparent; transition: all 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-icon { font-size: 16px; display: block; margin-bottom: 2px; }
+
+    /* SCREENS */
+    .screen { display: none; padding: 14px; flex: 1; overflow-y: auto; }
+    .screen.active { display: block; }
+
+    /* CARD */
+    .card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px; margin-bottom: 12px;
+    }
+    .card-title {
+      font-size: 11px; font-weight: 700; color: var(--text2);
+      text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px;
+    }
+
+    /* CONDITION GROUPS */
+    .cond-group { margin-bottom: 14px; }
+    .cond-group:last-child { margin-bottom: 0; }
+    .cond-label {
+      font-size: 12px; font-weight: 600; color: var(--text);
+      margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+    }
+    .badge-req { background: var(--accent); color: #0a0e1a; font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; }
+    .badge-opt { background: var(--bg3); color: var(--text2); font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+
+    /* RADIO */
+    .radio-list { display: flex; flex-direction: column; gap: 6px; }
+    .radio-row  { display: flex; gap: 8px; }
+    .radio-row .radio-opt { flex: 1; justify-content: center; }
+    .radio-opt {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; background: var(--bg3); border-radius: 8px;
+      cursor: pointer; border: 2px solid transparent;
+      transition: border-color 0.15s, background 0.15s;
+      font-size: 13px; -webkit-tap-highlight-color: transparent;
+    }
+    .radio-opt input[type="radio"] { display: none; }
+    .radio-circle {
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 2px solid var(--text2); flex-shrink: 0;
+      position: relative; transition: border-color 0.15s;
+    }
+    .radio-circle::after {
+      content: ''; position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%,-50%); width: 8px; height: 8px;
+      border-radius: 50%; background: var(--accent); opacity: 0; transition: opacity 0.15s;
+    }
+    .radio-opt:has(input:checked) { border-color: var(--accent); background: rgba(79,195,247,.1); }
+    .radio-opt:has(input:checked) .radio-circle { border-color: var(--accent); }
+    .radio-opt:has(input:checked) .radio-circle::after { opacity: 1; }
+
+    /* Error state */
+    .cond-group.has-error .cond-label { color: var(--red); }
+    .cond-group.has-error .radio-opt:not(:has(input:checked)) { border-color: rgba(244,67,54,.4); }
+
+    /* INPUTS */
+    .input-pair { display: flex; gap: 10px; align-items: flex-end; }
+    .input-group { flex: 1; }
+    .input-label { font-size: 10px; color: var(--text2); margin-bottom: 5px; }
+    .text-input {
+      width: 100%; padding: 10px 12px; background: var(--bg3);
+      border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-size: 14px; outline: none;
+      transition: border-color 0.15s; -webkit-appearance: none;
+    }
+    .text-input:focus { border-color: var(--accent); }
+    .input-unit { font-size: 12px; color: var(--text2); padding-bottom: 11px; white-space: nowrap; }
+
+    /* LIVE METER */
+    .meter-val { font-size: 44px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1; text-align: center; }
+    .meter-unit { font-size: 13px; color: var(--text2); text-align: center; margin-top: 4px; }
+
+    /* WAVEFORM */
+    .waveform { display: flex; align-items: center; justify-content: center; gap: 3px; height: 50px; margin: 12px 0 4px; }
+    .wave-bar { width: 5px; border-radius: 3px; background: var(--accent); opacity: 0.6; transition: height 0.08s ease; }
+
+    /* COUNTDOWN RING */
+    .countdown-wrap { text-align: center; margin-bottom: 10px; }
+    .ring-container { position: relative; width: 90px; height: 90px; display: inline-block; }
+    .ring-container svg { transform: rotate(-90deg); }
+    .ring-bg  { fill: none; stroke: var(--bg3); stroke-width: 6; }
+    .ring-arc { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; stroke-dasharray: 238.1; stroke-dashoffset: 238.1; transition: stroke-dashoffset 1s linear; }
+    .ring-num { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 28px; font-weight: 800; color: var(--accent); }
+
+    /* PROGRESS */
+    .progress-track { background: var(--bg3); border-radius: 4px; height: 5px; overflow: hidden; margin: 8px 0 6px; }
+    .progress-fill  { height: 100%; border-radius: 4px; background: var(--accent); transition: width 1s linear; }
+
+    /* BUTTONS */
+    .btn {
+      width: 100%; padding: 14px; border: none; border-radius: 10px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      transition: transform 0.1s; margin-bottom: 10px; -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+    .btn-primary { background: var(--accent); color: #0a0e1a; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text2); }
+    .btn-danger  { background: #1e2640; border: 1px solid var(--red); color: var(--red); }
+
+    /* STAT ROW */
+    .stat-row { display: flex; gap: 8px; }
+    .stat-box { flex: 1; background: var(--bg3); border-radius: 8px; padding: 10px 8px; text-align: center; }
+    .stat-lbl { font-size: 10px; color: var(--text2); margin-bottom: 4px; }
+    .stat-val { font-size: 14px; font-weight: 700; color: var(--accent); }
+
+    /* GAUGE */
+    .gauge-outer { position: relative; width: 170px; height: 170px; margin: 0 auto 14px; }
+    .gauge-outer svg { transform: rotate(-90deg); }
+    .gauge-bg  { fill: none; stroke: var(--bg3); stroke-width: 14; }
+    .gauge-arc { fill: none; stroke-width: 14; stroke-linecap: round; stroke-dasharray: 427.3; stroke-dashoffset: 427.3; transition: stroke-dashoffset 1.2s ease, stroke 0.5s; }
+    .gauge-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; }
+    .gauge-pct   { font-size: 36px; font-weight: 800; line-height: 1; }
+    .gauge-label { font-size: 10px; color: var(--text2); margin-top: 3px; }
+
+    /* WARNING BADGE */
+    .warn-badge { border-radius: 12px; padding: 14px 16px; text-align: center; margin-bottom: 12px; }
+    .warn-icon { font-size: 28px; margin-bottom: 6px; }
+    .warn-msg  { font-size: 18px; font-weight: 800; }
+    .warn-sub  { font-size: 12px; margin-top: 5px; opacity: 0.9; line-height: 1.5; }
+    .lv-ok      { background: rgba(102,187,106,.14); border: 1px solid #66bb6a; color: #66bb6a; }
+    .lv-caution { background: rgba(255,167,38,.14);  border: 1px solid #ffa726; color: #ffa726; }
+    .lv-warning { background: rgba(239,108,0,.14);   border: 1px solid #ef6c00; color: #ef6c00; }
+    .lv-danger  { background: rgba(244,67,54,.14);   border: 1px solid #f44336; color: #f44336; }
+
+    /* HISTORY */
+    .history-item { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+    .h-main { display: flex; align-items: center; gap: 12px; }
+    .h-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .h-info { flex: 1; }
+    .h-date { font-size: 10px; color: var(--text2); }
+    .h-type { font-size: 12px; font-weight: 600; margin-top: 2px; }
+    .h-pct  { font-size: 20px; font-weight: 800; }
+    .h-rms  { font-size: 10px; color: var(--text2); text-align: right; }
+    .h-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+    .h-tag  { background: var(--bg3); border-radius: 4px; padding: 3px 7px; font-size: 10px; color: var(--text2); }
+
+    /* NOTE */
+    .note {
+      background: rgba(79,195,247,.08); border: 1px solid rgba(79,195,247,.22);
+      border-radius: 8px; padding: 10px 12px; font-size: 11px; color: var(--text2);
+      line-height: 1.6; margin-bottom: 12px;
+    }
+    .note strong { color: var(--accent); }
+
+    /* SETTINGS */
+    .settings-row { display: flex; gap: 10px; margin-bottom: 10px; }
+    .settings-row .input-group { flex: 1; }
+
+    /* FUTURE CARD */
+    .future-card {
+      background: rgba(79,195,247,.04); border: 1px dashed rgba(79,195,247,.3);
+      border-radius: 12px; padding: 14px; margin-bottom: 12px;
+    }
+    .future-card .card-title { color: rgba(79,195,247,.6); }
+    .f-item { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; font-size: 12px; color: var(--text2); line-height: 1.6; }
+    .f-item:last-child { margin-bottom: 0; }
+    .f-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+
+    /* EMPTY */
+    .empty { text-align: center; padding: 50px 20px; color: var(--text2); }
+    .empty-icon { font-size: 44px; margin-bottom: 12px; }
+    .empty-text { font-size: 14px; line-height: 1.7; }
+
+    .status-msg { text-align: center; font-size: 11px; color: var(--accent); margin: 4px 0; }
+
+    /* TOAST */
+    .toast {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: var(--green); color: #fff; font-size: 13px; font-weight: 700;
+      padding: 10px 24px; border-radius: 24px; transition: transform 0.3s ease;
+      z-index: 999; pointer-events: none;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    .spacer { height: 24px; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-icon">🛢️</div>
+  <div>
+    <div class="header-title">OilSense</div>
+    <div class="header-sub" id="header-sub">エンジンオイル劣化判定</div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('baseline')"><span class="tab-icon">🔧</span>基準記録</div>
+  <div class="tab" onclick="switchTab('check')"><span class="tab-icon">📊</span>チェック</div>
+  <div class="tab" onclick="switchTab('history')"><span class="tab-icon">📅</span>履歴</div>
+  <div class="tab" onclick="switchTab('settings')"><span class="tab-icon">⚙️</span>設定</div>
+</div>
+
+<!-- ═══════════════ BASELINE ═══════════════ -->
+<div id="screen-baseline" class="screen active">
+
+  <div class="card">
+    <div class="card-title">計測条件</div>
+
+    <div class="cond-group" id="bl-cond-pos">
+      <div class="cond-label">スマホの設置位置 <span class="badge-req">必須</span></div>
+      <div class="radio-list">
+        <label class="radio-opt"><input type="radio" name="bl-pos" value="ダッシュボード上"><div class="radio-circle"></div><span>📱 ダッシュボード上</span></label>
+        <label class="radio-opt"><input type="radio" name="bl-pos" value="スマホホルダ固定"><div class="radio-circle"></div><span>🔒 スマホホルダ固定</span></label>
+        <label class="radio-opt"><input type="radio" name="bl-pos" value="エンジン上直置き"><div class="radio-circle"></div><span>🔧 エンジン上直置き</span></label>
+      </div>
+    </div>
+
+    <div class="cond-group" id="bl-cond-timing">
+      <div class="cond-label">計測タイミング <span class="badge-req">必須</span></div>
+      <div class="radio-row">
+        <label class="radio-opt"><input type="radio" name="bl-timing" value="交換後"><div class="radio-circle"></div><span>✅ 交換後</span></label>
+        <label class="radio-opt"><input type="radio" name="bl-timing" value="交換前"><div class="radio-circle"></div><span>⏰ 交換前</span></label>
+      </div>
+    </div>
+
+    <div class="cond-group">
+      <div class="cond-label">前回交換からの経過 <span class="badge-opt">任意</span></div>
+      <div class="input-pair">
+        <div class="input-group">
+          <div class="input-label">走行距離</div>
+          <input type="number" class="text-input" id="bl-km" placeholder="5000" min="0" inputmode="numeric">
+        </div>
+        <div class="input-unit">km</div>
+        <div class="input-group">
+          <div class="input-label">経過日数</div>
+          <input type="number" class="text-input" id="bl-days" placeholder="180" min="0" inputmode="numeric">
+        </div>
+        <div class="input-unit">日</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note"><strong>📋 測定条件：</strong>エンジン暖機後（水温計安定後）、エアコンOFF、平坦な場所でアイドリング中に計測してください。</div>
+
+  <div class="card">
+    <div class="card-title">ライブ振動モニター</div>
+    <div class="meter-val" id="live-val">— —</div>
+    <div class="meter-unit">g (RMS)</div>
+    <div class="waveform" id="waveform"></div>
+  </div>
+
+  <div id="bl-progress" style="display:none;">
+    <div class="card">
+      <div class="card-title">ベースライン記録中</div>
+      <div class="countdown-wrap">
+        <div class="ring-container">
+          <svg width="90" height="90" viewBox="0 0 90 90">
+            <circle class="ring-bg" cx="45" cy="45" r="38"/>
+            <circle class="ring-arc" id="bl-ring" cx="45" cy="45" r="38"/>
+          </svg>
+          <div class="ring-num" id="bl-count">30</div>
+        </div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="bl-bar" style="width:0%"></div></div>
+      <div class="status-msg" id="bl-status">センサーデータ収集中...</div>
+    </div>
+  </div>
+
+  <div id="bl-result" style="display:none;">
+    <div class="card">
+      <div class="card-title">✅ ベースライン記録完了</div>
+      <div class="stat-row">
+        <div class="stat-box"><div class="stat-lbl">振動RMS</div><div class="stat-val" id="bl-rms-disp">—</div></div>
+        <div class="stat-box"><div class="stat-lbl">記録日時</div><div class="stat-val" id="bl-date-disp" style="font-size:11px;">—</div></div>
+        <div class="stat-box"><div class="stat-lbl">サンプル数</div><div class="stat-val" id="bl-smp-disp">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" id="btn-bl-start" onclick="startBaseline()">🔴 ベースライン記録開始</button>
+  <button class="btn btn-outline" id="btn-bl-cancel" style="display:none;" onclick="cancelMeasurement()">キャンセル</button>
+  <div class="spacer"></div>
+</div>
+
+<!-- ═══════════════ CHECK ═══════════════ -->
+<div id="screen-check" class="screen">
+
+  <div id="check-no-bl">
+    <div class="empty">
+      <div class="empty-icon">📭</div>
+      <div class="empty-text">最初に「基準記録」タブで<br>オイル交換直後の振動を記録してください</div>
+    </div>
+  </div>
+
+  <div id="check-main" style="display:none;">
+
+    <div class="note"><strong>📋 測定条件：</strong>ベースライン記録時と同じ条件（暖機後・エアコンOFF・同じ設置場所）で計測してください。</div>
+
+    <div class="card">
+      <div class="card-title">計測条件</div>
+
+      <div class="cond-group" id="chk-cond-pos">
+        <div class="cond-label">スマホの設置位置 <span class="badge-req">必須</span></div>
+        <div class="radio-list">
+          <label class="radio-opt"><input type="radio" name="chk-pos" value="ダッシュボード上"><div class="radio-circle"></div><span>📱 ダッシュボード上</span></label>
+          <label class="radio-opt"><input type="radio" name="chk-pos" value="スマホホルダ固定"><div class="radio-circle"></div><span>🔒 スマホホルダ固定</span></label>
+          <label class="radio-opt"><input type="radio" name="chk-pos" value="エンジン上直置き"><div class="radio-circle"></div><span>🔧 エンジン上直置き</span></label>
+        </div>
+      </div>
+
+      <div class="cond-group">
+        <div class="cond-label">前回交換からの経過 <span class="badge-opt">任意</span></div>
+        <div class="input-pair">
+          <div class="input-group">
+            <div class="input-label">走行距離</div>
+            <input type="number" class="text-input" id="chk-km" placeholder="5000" min="0" inputmode="numeric">
+          </div>
+          <div class="input-unit">km</div>
+          <div class="input-group">
+            <div class="input-label">経過日数</div>
+            <input type="number" class="text-input" id="chk-days" placeholder="180" min="0" inputmode="numeric">
+          </div>
+          <div class="input-unit">日</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="check-result" style="display:none;">
+      <div class="gauge-outer">
+        <svg width="170" height="170" viewBox="0 0 170 170">
+          <circle class="gauge-bg" cx="85" cy="85" r="68"/>
+          <circle class="gauge-arc" id="gauge-arc" cx="85" cy="85" r="68" stroke="#4fc3f7"/>
+        </svg>
+        <div class="gauge-center">
+          <div class="gauge-pct" id="gauge-pct">—</div>
+          <div class="gauge-label">振動増加率</div>
+        </div>
+      </div>
+      <div class="warn-badge" id="warn-badge">
+        <div class="warn-icon" id="warn-icon"></div>
+        <div class="warn-msg"  id="warn-msg"></div>
+        <div class="warn-sub"  id="warn-sub"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">計測詳細</div>
+        <div class="stat-row">
+          <div class="stat-box"><div class="stat-lbl">ベースライン</div><div class="stat-val" id="detail-bl">—</div></div>
+          <div class="stat-box"><div class="stat-lbl">今回計測</div><div class="stat-val" id="detail-cur">—</div></div>
+          <div class="stat-box"><div class="stat-lbl">劣化率</div><div class="stat-val" id="detail-deg">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="check-progress" style="display:none;">
+      <div class="card">
+        <div class="card-title">オイルチェック中</div>
+        <div class="countdown-wrap">
+          <div class="ring-container">
+            <svg width="90" height="90" viewBox="0 0 90 90">
+              <circle class="ring-bg" cx="45" cy="45" r="38"/>
+              <circle class="ring-arc" id="chk-ring" cx="45" cy="45" r="38"/>
+            </svg>
+            <div class="ring-num" id="chk-count">30</div>
+          </div>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="chk-bar" style="width:0%"></div></div>
+        <div class="status-msg">振動データ収集中...</div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="btn-chk-start" onclick="startCheck()">📊 オイルチェック開始</button>
+    <button class="btn btn-outline" id="btn-chk-cancel" style="display:none;" onclick="cancelMeasurement()">キャンセル</button>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- ═══════════════ HISTORY ═══════════════ -->
+<div id="screen-history" class="screen">
+  <div id="hist-empty" class="empty">
+    <div class="empty-icon">📭</div>
+    <div class="empty-text">計測データがありません</div>
+  </div>
+  <div id="hist-list"></div>
+  <button class="btn btn-danger" id="btn-clear" onclick="clearAll()" style="display:none;">🗑️ データをすべて削除</button>
+  <div class="spacer"></div>
+</div>
+
+<!-- ═══════════════ SETTINGS ═══════════════ -->
+<div id="screen-settings" class="screen">
+
+  <div class="note">車両情報を登録しておくと履歴が見やすくなります。変更は自動保存されます。</div>
+
+  <div class="card">
+    <div class="card-title">車両情報</div>
+    <div class="settings-row">
+      <div class="input-group">
+        <div class="input-label">メーカー</div>
+        <input type="text" class="text-input" id="car-maker" placeholder="例: トヨタ" oninput="autoSaveCar()">
+      </div>
+      <div class="input-group">
+        <div class="input-label">車種</div>
+        <input type="text" class="text-input" id="car-model" placeholder="例: プリウス" oninput="autoSaveCar()">
+      </div>
+    </div>
+    <div class="settings-row" style="margin-top:10px;">
+      <div class="input-group">
+        <div class="input-label">年式</div>
+        <input type="number" class="text-input" id="car-year" placeholder="2020" inputmode="numeric" oninput="autoSaveCar()">
+      </div>
+      <div class="input-group">
+        <div class="input-label">記録開始時の走行距離 (km)</div>
+        <input type="number" class="text-input" id="car-odo" placeholder="50000" inputmode="numeric" oninput="autoSaveCar()">
+      </div>
+    </div>
+  </div>
+
+  <div class="future-card">
+    <div class="card-title">🔮 将来実装予定 — クラウド比較機能</div>
+    <div class="f-item"><div class="f-icon">📊</div><div>同車種・同設置位置のユーザーデータと比較し、自分のオイル劣化が平均的にどの程度かを把握できます</div></div>
+    <div class="f-item"><div class="f-icon">🗺️</div><div>走行環境（都市部・高速道路メインなど）による劣化傾向の違いも確認できるようにする予定です</div></div>
+    <div class="f-item"><div class="f-icon">🔒</div><div>データは匿名化して収集し、個人を特定する情報は一切送信しません</div></div>
+  </div>
+
+  <div class="spacer"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">✅ 保存しました</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let measuring   = false;
+let measureMode = null;
+let samples     = [];
+let motionCb    = null;
+let timerInt    = null;
+let liveBuffer  = [];
+let hpLast      = {x:0,y:0,z:0};
+let hpFilt      = {x:0,y:0,z:0};
+let toastTimer  = null;
+let carTimer    = null;
+const HP_ALPHA  = 0.85;
+const DURATION  = 30;
+const NUM_BARS  = 22;
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  buildWaveform();
+  initLiveMeter();
+  loadCarSettings();
+  refreshCheckScreen();
+  refreshHistory();
+});
+
+// ═══════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════
+function switchTab(name) {
+  const names = ['baseline','check','history','settings'];
+  document.querySelectorAll('.tab').forEach((t,i) =>
+    t.classList.toggle('active', names[i] === name));
+  document.querySelectorAll('.screen').forEach((s,i) =>
+    s.classList.toggle('active', names[i] === name));
+  if (name === 'check')   refreshCheckScreen();
+  if (name === 'history') refreshHistory();
+}
+
+// ═══════════════════════════════════════════════
+// WAVEFORM
+// ═══════════════════════════════════════════════
+function buildWaveform() {
+  const wf = el('waveform');
+  for (let i = 0; i < NUM_BARS; i++) {
+    const b = document.createElement('div');
+    b.className = 'wave-bar';
+    b.style.height = '4px';
+    wf.appendChild(b);
+  }
+}
+function updateWaveform(rmsVal) {
+  const scale = Math.min(rmsVal * 1500, 1);
+  document.querySelectorAll('.wave-bar').forEach(b => {
+    b.style.height  = (4 + Math.random() * 46 * scale) + 'px';
+    b.style.opacity = (0.35 + scale * 0.65).toFixed(2);
+  });
+}
+
+// ═══════════════════════════════════════════════
+// LIVE METER
+// ═══════════════════════════════════════════════
+function initLiveMeter() {
+  if (typeof DeviceMotionEvent === 'undefined') { el('live-val').textContent = 'センサーなし'; return; }
+  if (typeof DeviceMotionEvent.requestPermission === 'function') { el('live-val').textContent = '許可が必要'; return; }
+  attachLiveListener();
+}
+function attachLiveListener() {
+  window.addEventListener('devicemotion', e => {
+    if (measuring) return;
+    liveBuffer.push(mag(applyHP(
+      e.accelerationIncludingGravity?.x || 0,
+      e.accelerationIncludingGravity?.y || 0,
+      e.accelerationIncludingGravity?.z || 0
+    )));
+  });
+  setInterval(() => {
+    if (!liveBuffer.length) return;
+    const r = rms(liveBuffer); liveBuffer = [];
+    el('live-val').textContent = r.toFixed(4);
+    updateWaveform(r);
+  }, 100);
+}
+
+// ═══════════════════════════════════════════════
+// PERMISSION (iOS 13+)
+// ═══════════════════════════════════════════════
+async function ensurePermission() {
+  if (typeof DeviceMotionEvent === 'undefined') {
+    alert('このデバイスは加速度センサーに対応していません。'); return false;
+  }
+  if (typeof DeviceMotionEvent.requestPermission === 'function') {
+    try {
+      const res = await DeviceMotionEvent.requestPermission();
+      if (res !== 'granted') {
+        alert('センサーの許可が必要です。\niOS設定 › Safari › モーションとオリエンテーション のアクセスをONにしてください。');
+        return false;
+      }
+      attachLiveListener();
+    } catch(e) { alert('センサー許可リクエストでエラーが発生しました。'); return false; }
+  }
+  return true;
+}
+
+// ═══════════════════════════════════════════════
+// HP FILTER + DSP
+// ═══════════════════════════════════════════════
+function applyHP(x, y, z) {
+  hpFilt.x = HP_ALPHA * (hpFilt.x + x - hpLast.x);
+  hpFilt.y = HP_ALPHA * (hpFilt.y + y - hpLast.y);
+  hpFilt.z = HP_ALPHA * (hpFilt.z + z - hpLast.z);
+  hpLast = {x, y, z};
+  return {...hpFilt};
+}
+function mag(v) { return Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z); }
+function rms(arr) {
+  if (!arr.length) return 0;
+  return Math.sqrt(arr.reduce((s,v) => s+v*v, 0) / arr.length);
+}
+function resetHP() { hpLast = {x:0,y:0,z:0}; hpFilt = {x:0,y:0,z:0}; }
+
+// ═══════════════════════════════════════════════
+// VALIDATION
+// ═══════════════════════════════════════════════
+function radioVal(name) {
+  const c = document.querySelector(`input[name="${name}"]:checked`);
+  return c ? c.value : null;
+}
+function validateBaseline() {
+  const pos    = radioVal('bl-pos');
+  const timing = radioVal('bl-timing');
+  el('bl-cond-pos').classList.toggle('has-error', !pos);
+  el('bl-cond-timing').classList.toggle('has-error', !timing);
+  if (!pos || !timing) {
+    document.querySelector('#screen-baseline .card').scrollIntoView({behavior:'smooth'});
+    return false;
+  }
+  return true;
+}
+function validateCheck() {
+  const pos = radioVal('chk-pos');
+  el('chk-cond-pos').classList.toggle('has-error', !pos);
+  if (!pos) {
+    document.querySelector('#screen-check .card').scrollIntoView({behavior:'smooth'});
+    return false;
+  }
+  return true;
+}
+
+// ═══════════════════════════════════════════════
+// COUNTDOWN
+// ═══════════════════════════════════════════════
+function startCountdown(ringId, numId, barId, onDone) {
+  const CIRC = 238.1;
+  let rem = DURATION;
+  timerInt = setInterval(() => {
+    rem--;
+    el(numId).textContent = rem;
+    el(ringId).style.strokeDashoffset = CIRC - ((DURATION - rem) / DURATION) * CIRC;
+    el(barId).style.width = ((DURATION - rem) / DURATION * 100) + '%';
+    if (rem <= 0) { stopCountdown(); onDone(); }
+  }, 1000);
+}
+function stopCountdown() { clearInterval(timerInt); timerInt = null; }
+
+// ═══════════════════════════════════════════════
+// BASELINE
+// ═══════════════════════════════════════════════
+async function startBaseline() {
+  if (!validateBaseline()) return;
+  if (!await ensurePermission()) return;
+  measuring = true; measureMode = 'baseline'; samples = []; resetHP();
+
+  el('btn-bl-start').style.display  = 'none';
+  el('btn-bl-cancel').style.display = 'block';
+  el('bl-progress').style.display   = 'block';
+  el('bl-result').style.display     = 'none';
+
+  startCountdown('bl-ring', 'bl-count', 'bl-bar', finishBaseline);
+
+  motionCb = e => {
+    const v = mag(applyHP(
+      e.accelerationIncludingGravity?.x || 0,
+      e.accelerationIncludingGravity?.y || 0,
+      e.accelerationIncludingGravity?.z || 0
+    ));
+    samples.push(v);
+    el('live-val').textContent = v.toFixed(4);
+    updateWaveform(v);
+    el('bl-status').textContent = `収集中: ${samples.length} サンプル`;
+  };
+  window.addEventListener('devicemotion', motionCb);
+}
+
+function finishBaseline() {
+  if (!measuring || measureMode !== 'baseline') return;
+  window.removeEventListener('devicemotion', motionCb);
+  measuring = false;
+
+  const r   = rms(samples);
+  const now = new Date();
+  const cond = {
+    phonePos:        radioVal('bl-pos'),
+    timing:          radioVal('bl-timing'),
+    kmSinceChange:   el('bl-km').value   ? +el('bl-km').value   : null,
+    daysSinceChange: el('bl-days').value ? +el('bl-days').value : null
+  };
+
+  localStorage.setItem('oilsense_bl', JSON.stringify({ rms: r, date: now.toISOString(), samples: samples.length, conditions: cond }));
+  pushHistory({ type:'baseline', date: now.toISOString(), rms: r, deg: 0, samples: samples.length, conditions: cond });
+
+  el('bl-progress').style.display   = 'none';
+  el('bl-result').style.display     = 'block';
+  el('btn-bl-start').style.display  = 'block';
+  el('btn-bl-start').textContent    = '🔄 ベースラインを再記録';
+  el('btn-bl-cancel').style.display = 'none';
+  el('bl-rms-disp').textContent     = r.toFixed(5) + ' g';
+  el('bl-date-disp').textContent    = fmtDate(now);
+  el('bl-smp-disp').textContent     = samples.length + ' 件';
+}
+
+// ═══════════════════════════════════════════════
+// CHECK
+// ═══════════════════════════════════════════════
+function refreshCheckScreen() {
+  const bl = getBaseline();
+  el('check-no-bl').style.display = bl ? 'none'  : 'block';
+  el('check-main').style.display  = bl ? 'block' : 'none';
+}
+
+async function startCheck() {
+  if (!validateCheck()) return;
+  if (!await ensurePermission()) return;
+  measuring = true; measureMode = 'check'; samples = []; resetHP();
+
+  el('btn-chk-start').style.display  = 'none';
+  el('btn-chk-cancel').style.display = 'block';
+  el('check-progress').style.display = 'block';
+  el('check-result').style.display   = 'none';
+
+  startCountdown('chk-ring', 'chk-count', 'chk-bar', finishCheck);
+
+  motionCb = e => {
+    samples.push(mag(applyHP(
+      e.accelerationIncludingGravity?.x || 0,
+      e.accelerationIncludingGravity?.y || 0,
+      e.accelerationIncludingGravity?.z || 0
+    )));
+  };
+  window.addEventListener('devicemotion', motionCb);
+}
+
+function finishCheck() {
+  if (!measuring || measureMode !== 'check') return;
+  window.removeEventListener('devicemotion', motionCb);
+  measuring = false;
+
+  const cur  = rms(samples);
+  const bl   = getBaseline();
+  const deg  = ((cur - bl.rms) / bl.rms) * 100;
+  const now  = new Date();
+  const cond = {
+    phonePos:        radioVal('chk-pos'),
+    kmSinceChange:   el('chk-km').value   ? +el('chk-km').value   : null,
+    daysSinceChange: el('chk-days').value ? +el('chk-days').value : null
+  };
+
+  pushHistory({ type:'check', date: now.toISOString(), rms: cur, deg: deg, samples: samples.length, conditions: cond });
+
+  const CIRC = 427.3;
+  const arc  = el('gauge-arc');
+  arc.style.strokeDashoffset = CIRC - (Math.max(0, Math.min(deg,120)) / 120) * CIRC;
+  const color = warnColor(deg);
+  arc.style.stroke = color;
+
+  el('gauge-pct').textContent = (deg >= 0 ? '+' : '') + deg.toFixed(1) + '%';
+  el('gauge-pct').style.color = color;
+
+  const w = warning(deg);
+  el('warn-badge').className    = 'warn-badge ' + w.cls;
+  el('warn-icon').textContent   = w.icon;
+  el('warn-msg').textContent    = w.msg;
+  el('warn-sub').textContent    = w.sub;
+  el('detail-bl').textContent   = bl.rms.toFixed(5) + ' g';
+  el('detail-cur').textContent  = cur.toFixed(5) + ' g';
+  el('detail-deg').textContent  = (deg >= 0 ? '+' : '') + deg.toFixed(1) + '%';
+  el('detail-deg').style.color  = color;
+
+  el('check-progress').style.display  = 'none';
+  el('check-result').style.display    = 'block';
+  el('btn-chk-start').style.display   = 'block';
+  el('btn-chk-start').textContent     = '🔄 再計測';
+  el('btn-chk-cancel').style.display  = 'none';
+}
+
+// ═══════════════════════════════════════════════
+// CANCEL
+// ═══════════════════════════════════════════════
+function cancelMeasurement() {
+  stopCountdown();
+  if (motionCb) { window.removeEventListener('devicemotion', motionCb); motionCb = null; }
+  measuring = false; measureMode = null;
+  el('bl-progress').style.display    = 'none';
+  el('btn-bl-start').style.display   = 'block';
+  el('btn-bl-cancel').style.display  = 'none';
+  el('check-progress').style.display  = 'none';
+  el('btn-chk-start').style.display   = 'block';
+  el('btn-chk-cancel').style.display  = 'none';
+}
+
+// ═══════════════════════════════════════════════
+// WARNING LOGIC
+// ═══════════════════════════════════════════════
+function warning(deg) {
+  if (deg < 20) return {cls:'lv-ok',      icon:'✅',  msg:'まだOK',               sub:'オイルは良好な状態です。引き続き定期チェックを。'};
+  if (deg < 40) return {cls:'lv-caution', icon:'⚠️', msg:'交換を推奨',            sub:'劣化が見られます。近いうちに交換を検討してください。'};
+  if (deg < 60) return {cls:'lv-warning', icon:'🔶', msg:'早めに交換を',           sub:'劣化が進んでいます。今月中に交換することをお勧めします。'};
+  return              {cls:'lv-danger',  icon:'🚨', msg:'今すぐ交換してください！', sub:'オイルが著しく劣化しています。エンジンへの悪影響の恐れがあります。'};
+}
+function warnColor(deg) {
+  if (deg < 20) return '#66bb6a';
+  if (deg < 40) return '#ffa726';
+  if (deg < 60) return '#ef6c00';
+  return '#f44336';
+}
+
+// ═══════════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════════
+function pushHistory(entry) {
+  const h = getHistory(); h.push(entry);
+  localStorage.setItem('oilsense_hist', JSON.stringify(h));
+}
+function getHistory()  { try { return JSON.parse(localStorage.getItem('oilsense_hist') || '[]'); } catch { return []; } }
+function getBaseline() { try { return JSON.parse(localStorage.getItem('oilsense_bl')); } catch { return null; } }
+
+function refreshHistory() {
+  const h = getHistory();
+  const list = el('hist-list'), empty = el('hist-empty'), clr = el('btn-clear');
+  if (!h.length) { empty.style.display = 'block'; list.innerHTML = ''; clr.style.display = 'none'; return; }
+  empty.style.display = 'none'; clr.style.display = 'block';
+
+  list.innerHTML = [...h].reverse().map(e => {
+    const isBl  = e.type === 'baseline';
+    const color = isBl ? '#4fc3f7' : warnColor(e.deg);
+    const date  = new Date(e.date);
+    const label = isBl ? '🔧 ベースライン登録' : warning(e.deg).msg;
+    const pctTx = isBl ? '基準値' : (e.deg >= 0 ? '+' : '') + e.deg.toFixed(1) + '%';
+    const cond  = e.conditions || {};
+    const tags  = [
+      cond.phonePos,
+      cond.timing,
+      cond.kmSinceChange   != null ? `走行 ${cond.kmSinceChange.toLocaleString()} km` : null,
+      cond.daysSinceChange != null ? `${cond.daysSinceChange} 日経過` : null
+    ].filter(Boolean);
+
+    return `<div class="history-item">
+      <div class="h-main">
+        <div class="h-dot" style="background:${color}"></div>
+        <div class="h-info">
+          <div class="h-date">${fmtDate(date)}</div>
+          <div class="h-type" style="color:${color}">${label}</div>
+        </div>
+        <div>
+          <div class="h-pct" style="color:${color}">${pctTx}</div>
+          <div class="h-rms">${e.rms.toFixed(4)} g</div>
+        </div>
+      </div>
+      ${tags.length ? `<div class="h-tags">${tags.map(t => `<span class="h-tag">${t}</span>`).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function clearAll() {
+  if (!confirm('すべてのデータ（ベースライン含む）を削除しますか？')) return;
+  localStorage.removeItem('oilsense_bl');
+  localStorage.removeItem('oilsense_hist');
+  refreshHistory(); refreshCheckScreen();
+  el('bl-result').style.display = 'none';
+  el('btn-bl-start').textContent = '🔴 ベースライン記録開始';
+}
+
+// ═══════════════════════════════════════════════
+// SETTINGS / CAR INFO
+// ═══════════════════════════════════════════════
+function loadCarSettings() {
+  try {
+    const car = JSON.parse(localStorage.getItem('oilsense_car') || '{}');
+    if (car.maker) el('car-maker').value = car.maker;
+    if (car.model) el('car-model').value = car.model;
+    if (car.year)  el('car-year').value  = car.year;
+    if (car.odo)   el('car-odo').value   = car.odo;
+    updateHeaderSub(car);
+  } catch {}
+}
+
+function autoSaveCar() {
+  clearTimeout(carTimer);
+  carTimer = setTimeout(() => {
+    const car = {
+      maker: el('car-maker').value.trim(),
+      model: el('car-model').value.trim(),
+      year:  el('car-year').value,
+      odo:   el('car-odo').value
+    };
+    localStorage.setItem('oilsense_car', JSON.stringify(car));
+    updateHeaderSub(car);
+    showToast('✅ 保存しました');
+  }, 800);
+}
+
+function updateHeaderSub(car) {
+  const parts = [car.maker, car.model, car.year ? car.year + '年式' : ''].filter(Boolean);
+  el('header-sub').textContent = parts.length ? parts.join(' ') : 'エンジンオイル劣化判定';
+}
+
+// ═══════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════
+function showToast(msg) {
+  const t = el('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ═══════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════
+function el(id) { return document.getElementById(id); }
+function fmtDate(d) {
+  const p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+</script>
+</body>
+</html>
