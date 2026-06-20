@@ -20,6 +20,9 @@
       --text:   #e0e8ff;
       --text2:  #8899bb;
       --border: #2a3555;
+      --pos-dash: #4fc3f7;
+      --pos-holder: #ab47bc;
+      --pos-engine: #26a69a;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
@@ -30,210 +33,140 @@
       display: flex; flex-direction: column;
     }
 
-    /* HEADER */
-    .header {
-      background: var(--bg2); padding: 13px 16px 10px;
-      border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
-    }
+    .header { background: var(--bg2); padding: 13px 16px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
     .header-icon { font-size: 24px; }
     .header-title { font-size: 18px; font-weight: 800; color: var(--accent); }
     .header-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
 
-    /* TABS */
-    .tabs {
-      background: var(--bg2); display: flex;
-      border-bottom: 1px solid var(--border); flex-shrink: 0;
-    }
-    .tab {
-      flex: 1; padding: 8px 2px 6px; text-align: center;
-      font-size: 10px; color: var(--text2); cursor: pointer;
-      border-bottom: 2px solid transparent; transition: all 0.2s;
-      -webkit-tap-highlight-color: transparent;
-    }
+    .tabs { background: var(--bg2); display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .tab { flex: 1; padding: 8px 2px 6px; text-align: center; font-size: 10px; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; -webkit-tap-highlight-color: transparent; }
     .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
     .tab-icon { font-size: 16px; display: block; margin-bottom: 2px; }
 
-    /* SCREENS */
     .screen { display: none; padding: 14px; flex: 1; overflow-y: auto; }
     .screen.active { display: block; }
 
-    /* CARD */
-    .card {
-      background: var(--bg2); border: 1px solid var(--border);
-      border-radius: 12px; padding: 14px; margin-bottom: 12px;
-    }
-    .card-title {
-      font-size: 11px; font-weight: 700; color: var(--text2);
-      text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px;
-    }
+    .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+    .card-title { font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
+    .disabled-card { opacity: 0.55; }
+    .badge-soon { background: #5c6b8a; color: #fff; font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-left: 6px; text-transform: none; }
 
-    /* CONDITION GROUPS */
     .cond-group { margin-bottom: 14px; }
     .cond-group:last-child { margin-bottom: 0; }
-    .cond-label {
-      font-size: 12px; font-weight: 600; color: var(--text);
-      margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
-    }
+    .cond-label { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
     .badge-req { background: var(--accent); color: #0a0e1a; font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; }
     .badge-opt { background: var(--bg3); color: var(--text2); font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
 
-    /* RADIO */
     .radio-list { display: flex; flex-direction: column; gap: 6px; }
-    .radio-row  { display: flex; gap: 8px; }
-    .radio-row .radio-opt { flex: 1; justify-content: center; }
-    .radio-opt {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 12px; background: var(--bg3); border-radius: 8px;
-      cursor: pointer; border: 2px solid transparent;
-      transition: border-color 0.15s, background 0.15s;
-      font-size: 13px; -webkit-tap-highlight-color: transparent;
+    .radio-opt, .checkbox-opt {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg3);
+      border-radius: 8px; cursor: pointer; border: 2px solid transparent;
+      transition: border-color 0.15s, background 0.15s; font-size: 13px; -webkit-tap-highlight-color: transparent;
     }
-    .radio-opt input[type="radio"] { display: none; }
-    .radio-circle {
-      width: 18px; height: 18px; border-radius: 50%;
-      border: 2px solid var(--text2); flex-shrink: 0;
-      position: relative; transition: border-color 0.15s;
-    }
-    .radio-circle::after {
-      content: ''; position: absolute; top: 50%; left: 50%;
-      transform: translate(-50%,-50%); width: 8px; height: 8px;
-      border-radius: 50%; background: var(--accent); opacity: 0; transition: opacity 0.15s;
-    }
+    .radio-opt input, .checkbox-opt input { display: none; }
+    .radio-circle { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--text2); flex-shrink: 0; position: relative; transition: border-color 0.15s; }
+    .radio-circle::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 8px; height: 8px; border-radius: 50%; background: var(--accent); opacity: 0; transition: opacity 0.15s; }
     .radio-opt:has(input:checked) { border-color: var(--accent); background: rgba(79,195,247,.1); }
     .radio-opt:has(input:checked) .radio-circle { border-color: var(--accent); }
     .radio-opt:has(input:checked) .radio-circle::after { opacity: 1; }
 
-    /* Error state */
+    .checkbox-box { width: 18px; height: 18px; border-radius: 5px; border: 2px solid var(--text2); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; color: transparent; transition: all 0.15s; }
+    .checkbox-opt:has(input:checked) { border-color: var(--accent); background: rgba(79,195,247,.1); }
+    .checkbox-opt:has(input:checked) .checkbox-box { background: var(--accent); border-color: var(--accent); color: #0a0e1a; }
+
     .cond-group.has-error .cond-label { color: var(--red); }
     .cond-group.has-error .radio-opt:not(:has(input:checked)) { border-color: rgba(244,67,54,.4); }
 
-    /* INPUTS */
     .input-pair { display: flex; gap: 10px; align-items: flex-end; }
     .input-group { flex: 1; }
     .input-label { font-size: 10px; color: var(--text2); margin-bottom: 5px; }
-    .text-input {
-      width: 100%; padding: 10px 12px; background: var(--bg3);
-      border: 1px solid var(--border); border-radius: 8px;
-      color: var(--text); font-size: 14px; outline: none;
-      transition: border-color 0.15s; -webkit-appearance: none;
-    }
+    .text-input { width: 100%; padding: 10px 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; outline: none; transition: border-color 0.15s; -webkit-appearance: none; }
     .text-input:focus { border-color: var(--accent); }
     .input-unit { font-size: 12px; color: var(--text2); padding-bottom: 11px; white-space: nowrap; }
+    .field-hint { font-size: 10px; color: var(--text2); margin-top: 5px; }
 
-    /* LIVE METER */
     .meter-val { font-size: 44px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1; text-align: center; }
     .meter-unit { font-size: 13px; color: var(--text2); text-align: center; margin-top: 4px; }
-
-    /* WAVEFORM */
     .waveform { display: flex; align-items: center; justify-content: center; gap: 3px; height: 50px; margin: 12px 0 4px; }
     .wave-bar { width: 5px; border-radius: 3px; background: var(--accent); opacity: 0.6; transition: height 0.08s ease; }
 
-    /* COUNTDOWN RING */
     .countdown-wrap { text-align: center; margin-bottom: 10px; }
     .ring-container { position: relative; width: 90px; height: 90px; display: inline-block; }
     .ring-container svg { transform: rotate(-90deg); }
-    .ring-bg  { fill: none; stroke: var(--bg3); stroke-width: 6; }
+    .ring-bg { fill: none; stroke: var(--bg3); stroke-width: 6; }
     .ring-arc { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; stroke-dasharray: 238.1; stroke-dashoffset: 238.1; transition: stroke-dashoffset 1s linear; }
     .ring-num { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 28px; font-weight: 800; color: var(--accent); }
 
-    /* PROGRESS */
     .progress-track { background: var(--bg3); border-radius: 4px; height: 5px; overflow: hidden; margin: 8px 0 6px; }
-    .progress-fill  { height: 100%; border-radius: 4px; background: var(--accent); transition: width 1s linear; }
+    .progress-fill { height: 100%; border-radius: 4px; background: var(--accent); transition: width 1s linear; }
 
-    /* BUTTONS */
-    .btn {
-      width: 100%; padding: 14px; border: none; border-radius: 10px;
-      font-size: 15px; font-weight: 700; cursor: pointer;
-      transition: transform 0.1s; margin-bottom: 10px; -webkit-tap-highlight-color: transparent;
-    }
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; transition: transform 0.1s; margin-bottom: 10px; -webkit-tap-highlight-color: transparent; }
     .btn:active { transform: scale(0.97); }
-    .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
     .btn-primary { background: var(--accent); color: #0a0e1a; }
     .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text2); }
-    .btn-danger  { background: #1e2640; border: 1px solid var(--red); color: var(--red); }
+    .btn-danger { background: #1e2640; border: 1px solid var(--red); color: var(--red); }
+    .small-btn { background: var(--bg3); border: 1px solid var(--border); color: var(--text2); font-size: 11px; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
 
-    /* STAT ROW */
     .stat-row { display: flex; gap: 8px; }
     .stat-box { flex: 1; background: var(--bg3); border-radius: 8px; padding: 10px 8px; text-align: center; }
     .stat-lbl { font-size: 10px; color: var(--text2); margin-bottom: 4px; }
     .stat-val { font-size: 14px; font-weight: 700; color: var(--accent); }
 
-    /* GAUGE */
-    .gauge-outer { position: relative; width: 170px; height: 170px; margin: 0 auto 14px; }
-    .gauge-outer svg { transform: rotate(-90deg); }
-    .gauge-bg  { fill: none; stroke: var(--bg3); stroke-width: 14; }
-    .gauge-arc { fill: none; stroke-width: 14; stroke-linecap: round; stroke-dasharray: 427.3; stroke-dashoffset: 427.3; transition: stroke-dashoffset 1.2s ease, stroke 0.5s; }
-    .gauge-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; }
-    .gauge-pct   { font-size: 36px; font-weight: 800; line-height: 1; }
-    .gauge-label { font-size: 10px; color: var(--text2); margin-top: 3px; }
-
-    /* WARNING BADGE */
-    .warn-badge { border-radius: 12px; padding: 14px 16px; text-align: center; margin-bottom: 12px; }
-    .warn-icon { font-size: 28px; margin-bottom: 6px; }
-    .warn-msg  { font-size: 18px; font-weight: 800; }
-    .warn-sub  { font-size: 12px; margin-top: 5px; opacity: 0.9; line-height: 1.5; }
-    .lv-ok      { background: rgba(102,187,106,.14); border: 1px solid #66bb6a; color: #66bb6a; }
-    .lv-caution { background: rgba(255,167,38,.14);  border: 1px solid #ffa726; color: #ffa726; }
-    .lv-warning { background: rgba(239,108,0,.14);   border: 1px solid #ef6c00; color: #ef6c00; }
-    .lv-danger  { background: rgba(244,67,54,.14);   border: 1px solid #f44336; color: #f44336; }
-
-    /* HISTORY */
     .history-item { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
-    .h-main { display: flex; align-items: center; gap: 12px; }
-    .h-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .h-main { display: flex; align-items: flex-start; gap: 12px; }
+    .h-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
     .h-info { flex: 1; }
     .h-date { font-size: 10px; color: var(--text2); }
-    .h-type { font-size: 12px; font-weight: 600; margin-top: 2px; }
-    .h-pct  { font-size: 20px; font-weight: 800; }
-    .h-rms  { font-size: 10px; color: var(--text2); text-align: right; }
+    .h-type { font-size: 13px; font-weight: 700; margin-top: 3px; }
+    .h-rms { font-size: 13px; font-weight: 700; color: var(--text); text-align: right; }
     .h-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
-    .h-tag  { background: var(--bg3); border-radius: 4px; padding: 3px 7px; font-size: 10px; color: var(--text2); }
+    .h-tag { background: var(--bg3); border-radius: 4px; padding: 3px 7px; font-size: 10px; color: var(--text2); }
+    .warn-tag { margin-top: 6px; font-size: 10px; color: #ef6c00; background: rgba(239,108,0,.12); border-radius: 6px; padding: 4px 8px; display: inline-block; }
+    .edit-del-btn { background: rgba(244,67,54,.15); border: 1px solid var(--red); color: var(--red); border-radius: 6px; padding: 4px 8px; font-size: 11px; cursor: pointer; margin-top: 6px; }
+    .set-bl-btn { background: rgba(79,195,247,.12); border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; padding: 4px 8px; font-size: 10px; cursor: pointer; margin-top: 6px; white-space: nowrap; }
 
-    /* NOTE */
-    .note {
-      background: rgba(79,195,247,.08); border: 1px solid rgba(79,195,247,.22);
-      border-radius: 8px; padding: 10px 12px; font-size: 11px; color: var(--text2);
-      line-height: 1.6; margin-bottom: 12px;
-    }
+    .bl-status-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+    .bl-status-row:last-child { border-bottom: none; }
+
+    .note { background: rgba(79,195,247,.08); border: 1px solid rgba(79,195,247,.22); border-radius: 8px; padding: 10px 12px; font-size: 11px; color: var(--text2); line-height: 1.6; margin-bottom: 12px; }
     .note strong { color: var(--accent); }
 
-    /* SETTINGS */
     .settings-row { display: flex; gap: 10px; margin-bottom: 10px; }
     .settings-row .input-group { flex: 1; }
 
-    /* FUTURE CARD */
-    .future-card {
-      background: rgba(79,195,247,.04); border: 1px dashed rgba(79,195,247,.3);
-      border-radius: 12px; padding: 14px; margin-bottom: 12px;
-    }
+    .future-card { background: rgba(79,195,247,.04); border: 1px dashed rgba(79,195,247,.3); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
     .future-card .card-title { color: rgba(79,195,247,.6); }
     .f-item { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; font-size: 12px; color: var(--text2); line-height: 1.6; }
     .f-item:last-child { margin-bottom: 0; }
     .f-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
 
-    /* EMPTY */
+    .noise-placeholder { display: flex; align-items: center; gap: 12px; }
+    .noise-icon { font-size: 28px; }
+    .noise-text { font-size: 11px; color: var(--text2); line-height: 1.6; }
+
     .empty { text-align: center; padding: 50px 20px; color: var(--text2); }
     .empty-icon { font-size: 44px; margin-bottom: 12px; }
     .empty-text { font-size: 14px; line-height: 1.7; }
-
     .status-msg { text-align: center; font-size: 11px; color: var(--accent); margin: 4px 0; }
 
-    /* TOAST */
-    .toast {
-      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
-      background: var(--green); color: #fff; font-size: 13px; font-weight: 700;
-      padding: 10px 24px; border-radius: 24px; transition: transform 0.3s ease;
-      z-index: 999; pointer-events: none;
-    }
-    .toast.show { transform: translateX(-50%) translateY(0); }
+    .segmented { display: flex; background: var(--bg3); border-radius: 8px; padding: 3px; gap: 3px; margin-bottom: 10px; }
+    .seg-btn { flex: 1; text-align: center; padding: 8px 4px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--text2); cursor: pointer; }
+    .seg-btn.active { background: var(--accent); color: #0a0e1a; }
 
+    .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+    .chip { display: flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 14px; background: var(--bg3); font-size: 11px; color: var(--text2); cursor: pointer; border: 1px solid transparent; transition: all 0.15s; opacity: 0.5; }
+    .chip.active { opacity: 1; color: var(--text); }
+    .chip-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .chart-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 8px; margin-bottom: 12px; }
+    .chart-legend-note { font-size: 10px; color: var(--text2); text-align: center; margin-bottom: 8px; }
+
+    .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--green); color: #fff; font-size: 13px; font-weight: 700; padding: 10px 24px; border-radius: 24px; transition: transform 0.3s ease; z-index: 999; pointer-events: none; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
     .spacer { height: 24px; }
   </style>
 </head>
 <body>
 
-<!-- HEADER -->
 <div class="header">
   <div class="header-icon">🛢️</div>
   <div>
@@ -242,50 +175,39 @@
   </div>
 </div>
 
-<!-- TABS -->
 <div class="tabs">
-  <div class="tab active" onclick="switchTab('baseline')"><span class="tab-icon">🔧</span>基準記録</div>
-  <div class="tab" onclick="switchTab('check')"><span class="tab-icon">📊</span>チェック</div>
+  <div class="tab active" onclick="switchTab('record')"><span class="tab-icon">🔧</span>記録</div>
   <div class="tab" onclick="switchTab('history')"><span class="tab-icon">📅</span>履歴</div>
+  <div class="tab" onclick="switchTab('chart')"><span class="tab-icon">📈</span>グラフ</div>
   <div class="tab" onclick="switchTab('settings')"><span class="tab-icon">⚙️</span>設定</div>
 </div>
 
-<!-- ═══════════════ BASELINE ═══════════════ -->
-<div id="screen-baseline" class="screen active">
+<!-- ═══════════════ RECORD ═══════════════ -->
+<div id="screen-record" class="screen active">
 
   <div class="card">
     <div class="card-title">計測条件</div>
 
-    <div class="cond-group" id="bl-cond-pos">
-      <div class="cond-label">スマホの設置位置 <span class="badge-req">必須</span></div>
-      <div class="radio-list">
-        <label class="radio-opt"><input type="radio" name="bl-pos" value="ダッシュボード上"><div class="radio-circle"></div><span>📱 ダッシュボード上</span></label>
-        <label class="radio-opt"><input type="radio" name="bl-pos" value="スマホホルダ固定"><div class="radio-circle"></div><span>🔒 スマホホルダ固定</span></label>
-        <label class="radio-opt"><input type="radio" name="bl-pos" value="エンジン上直置き"><div class="radio-circle"></div><span>🔧 エンジン上直置き</span></label>
-      </div>
-    </div>
-
-    <div class="cond-group" id="bl-cond-timing">
-      <div class="cond-label">計測タイミング <span class="badge-req">必須</span></div>
-      <div class="radio-row">
-        <label class="radio-opt"><input type="radio" name="bl-timing" value="交換後"><div class="radio-circle"></div><span>✅ 交換後</span></label>
-        <label class="radio-opt"><input type="radio" name="bl-timing" value="交換前"><div class="radio-circle"></div><span>⏰ 交換前</span></label>
-      </div>
+    <div class="cond-group">
+      <div class="cond-label">走行距離 <span class="badge-req">必須</span></div>
+      <input type="number" class="text-input" id="rec-odo" placeholder="例: 52000" min="0" inputmode="numeric">
+      <div class="field-hint" id="rec-odo-hint"></div>
     </div>
 
     <div class="cond-group">
-      <div class="cond-label">前回交換からの経過 <span class="badge-opt">任意</span></div>
-      <div class="input-pair">
-        <div class="input-group">
-          <div class="input-label">走行距離</div>
-          <input type="number" class="text-input" id="bl-km" placeholder="5000" min="0" inputmode="numeric">
-        </div>
-        <div class="input-unit">km</div>
-        <div class="input-group">
-          <div class="input-label">経過日数</div>
-          <input type="number" class="text-input" id="bl-days" placeholder="180" min="0" inputmode="numeric">
-        </div>
-        <div class="input-unit">日</div>
+      <label class="checkbox-opt">
+        <input type="checkbox" id="rec-justchanged">
+        <div class="checkbox-box">✓</div>
+        <span>🆕 オイル交換直後</span>
+      </label>
+    </div>
+
+    <div class="cond-group" id="rec-cond-pos">
+      <div class="cond-label">スマホの設置位置 <span class="badge-req">必須</span></div>
+      <div class="radio-list">
+        <label class="radio-opt"><input type="radio" name="rec-pos" value="dashboard"><div class="radio-circle"></div><span>📱 ダッシュボード上</span></label>
+        <label class="radio-opt"><input type="radio" name="rec-pos" value="holder"><div class="radio-circle"></div><span>🔒 スマホホルダ固定</span></label>
+        <label class="radio-opt"><input type="radio" name="rec-pos" value="engine_room"><div class="radio-circle"></div><span>🔧 エンジンルーム内（エンジン直置き不可）</span></label>
       </div>
     </div>
   </div>
@@ -299,139 +221,92 @@
     <div class="waveform" id="waveform"></div>
   </div>
 
-  <div id="bl-progress" style="display:none;">
+  <div class="card disabled-card">
+    <div class="card-title">🎤 ノイズレベル測定 <span class="badge-soon">次バージョンで実装予定</span></div>
+    <div class="noise-placeholder">
+      <div class="noise-icon">🔇</div>
+      <div class="noise-text">エンジン音のノイズレベルを参考値として記録する機能を準備中です。現在は動作しません。</div>
+    </div>
+  </div>
+
+  <div id="rec-progress" style="display:none;">
     <div class="card">
-      <div class="card-title">ベースライン記録中</div>
+      <div class="card-title">計測中</div>
       <div class="countdown-wrap">
         <div class="ring-container">
           <svg width="90" height="90" viewBox="0 0 90 90">
             <circle class="ring-bg" cx="45" cy="45" r="38"/>
-            <circle class="ring-arc" id="bl-ring" cx="45" cy="45" r="38"/>
+            <circle class="ring-arc" id="rec-ring" cx="45" cy="45" r="38"/>
           </svg>
-          <div class="ring-num" id="bl-count">30</div>
+          <div class="ring-num" id="rec-count">30</div>
         </div>
       </div>
-      <div class="progress-track"><div class="progress-fill" id="bl-bar" style="width:0%"></div></div>
-      <div class="status-msg" id="bl-status">センサーデータ収集中...</div>
+      <div class="progress-track"><div class="progress-fill" id="rec-bar" style="width:0%"></div></div>
+      <div class="status-msg" id="rec-status">センサーデータ収集中...</div>
     </div>
   </div>
 
-  <div id="bl-result" style="display:none;">
+  <div id="rec-result" style="display:none;">
     <div class="card">
-      <div class="card-title">✅ ベースライン記録完了</div>
+      <div class="card-title">✅ 記録完了</div>
       <div class="stat-row">
-        <div class="stat-box"><div class="stat-lbl">振動RMS</div><div class="stat-val" id="bl-rms-disp">—</div></div>
-        <div class="stat-box"><div class="stat-lbl">記録日時</div><div class="stat-val" id="bl-date-disp" style="font-size:11px;">—</div></div>
-        <div class="stat-box"><div class="stat-lbl">サンプル数</div><div class="stat-val" id="bl-smp-disp">—</div></div>
+        <div class="stat-box"><div class="stat-lbl">振動RMS</div><div class="stat-val" id="res-rms">—</div></div>
+        <div class="stat-box"><div class="stat-lbl">走行距離</div><div class="stat-val" id="res-odo">—</div></div>
+        <div class="stat-box"><div class="stat-lbl">基準値比</div><div class="stat-val" id="res-deg">—</div></div>
       </div>
+      <div class="field-hint" id="res-hint" style="margin-top:10px;"></div>
     </div>
   </div>
 
-  <button class="btn btn-primary" id="btn-bl-start" onclick="startBaseline()">🔴 ベースライン記録開始</button>
-  <button class="btn btn-outline" id="btn-bl-cancel" style="display:none;" onclick="cancelMeasurement()">キャンセル</button>
-  <div class="spacer"></div>
-</div>
-
-<!-- ═══════════════ CHECK ═══════════════ -->
-<div id="screen-check" class="screen">
-
-  <div id="check-no-bl">
-    <div class="empty">
-      <div class="empty-icon">📭</div>
-      <div class="empty-text">最初に「基準記録」タブで<br>オイル交換直後の振動を記録してください</div>
-    </div>
-  </div>
-
-  <div id="check-main" style="display:none;">
-
-    <div class="note"><strong>📋 測定条件：</strong>ベースライン記録時と同じ条件（暖機後・エアコンOFF・同じ設置場所）で計測してください。</div>
-
-    <div class="card">
-      <div class="card-title">計測条件</div>
-
-      <div class="cond-group" id="chk-cond-pos">
-        <div class="cond-label">スマホの設置位置 <span class="badge-req">必須</span></div>
-        <div class="radio-list">
-          <label class="radio-opt"><input type="radio" name="chk-pos" value="ダッシュボード上"><div class="radio-circle"></div><span>📱 ダッシュボード上</span></label>
-          <label class="radio-opt"><input type="radio" name="chk-pos" value="スマホホルダ固定"><div class="radio-circle"></div><span>🔒 スマホホルダ固定</span></label>
-          <label class="radio-opt"><input type="radio" name="chk-pos" value="エンジン上直置き"><div class="radio-circle"></div><span>🔧 エンジン上直置き</span></label>
-        </div>
-      </div>
-
-      <div class="cond-group">
-        <div class="cond-label">前回交換からの経過 <span class="badge-opt">任意</span></div>
-        <div class="input-pair">
-          <div class="input-group">
-            <div class="input-label">走行距離</div>
-            <input type="number" class="text-input" id="chk-km" placeholder="5000" min="0" inputmode="numeric">
-          </div>
-          <div class="input-unit">km</div>
-          <div class="input-group">
-            <div class="input-label">経過日数</div>
-            <input type="number" class="text-input" id="chk-days" placeholder="180" min="0" inputmode="numeric">
-          </div>
-          <div class="input-unit">日</div>
-        </div>
-      </div>
-    </div>
-
-    <div id="check-result" style="display:none;">
-      <div class="gauge-outer">
-        <svg width="170" height="170" viewBox="0 0 170 170">
-          <circle class="gauge-bg" cx="85" cy="85" r="68"/>
-          <circle class="gauge-arc" id="gauge-arc" cx="85" cy="85" r="68" stroke="#4fc3f7"/>
-        </svg>
-        <div class="gauge-center">
-          <div class="gauge-pct" id="gauge-pct">—</div>
-          <div class="gauge-label">振動増加率</div>
-        </div>
-      </div>
-      <div class="warn-badge" id="warn-badge">
-        <div class="warn-icon" id="warn-icon"></div>
-        <div class="warn-msg"  id="warn-msg"></div>
-        <div class="warn-sub"  id="warn-sub"></div>
-      </div>
-      <div class="card">
-        <div class="card-title">計測詳細</div>
-        <div class="stat-row">
-          <div class="stat-box"><div class="stat-lbl">ベースライン</div><div class="stat-val" id="detail-bl">—</div></div>
-          <div class="stat-box"><div class="stat-lbl">今回計測</div><div class="stat-val" id="detail-cur">—</div></div>
-          <div class="stat-box"><div class="stat-lbl">劣化率</div><div class="stat-val" id="detail-deg">—</div></div>
-        </div>
-      </div>
-    </div>
-
-    <div id="check-progress" style="display:none;">
-      <div class="card">
-        <div class="card-title">オイルチェック中</div>
-        <div class="countdown-wrap">
-          <div class="ring-container">
-            <svg width="90" height="90" viewBox="0 0 90 90">
-              <circle class="ring-bg" cx="45" cy="45" r="38"/>
-              <circle class="ring-arc" id="chk-ring" cx="45" cy="45" r="38"/>
-            </svg>
-            <div class="ring-num" id="chk-count">30</div>
-          </div>
-        </div>
-        <div class="progress-track"><div class="progress-fill" id="chk-bar" style="width:0%"></div></div>
-        <div class="status-msg">振動データ収集中...</div>
-      </div>
-    </div>
-
-    <button class="btn btn-primary" id="btn-chk-start" onclick="startCheck()">📊 オイルチェック開始</button>
-    <button class="btn btn-outline" id="btn-chk-cancel" style="display:none;" onclick="cancelMeasurement()">キャンセル</button>
-  </div>
+  <button class="btn btn-primary" id="btn-rec-start" onclick="startRecording()">🔴 計測開始</button>
+  <button class="btn btn-outline" id="btn-rec-cancel" style="display:none;" onclick="cancelMeasurement()">キャンセル</button>
   <div class="spacer"></div>
 </div>
 
 <!-- ═══════════════ HISTORY ═══════════════ -->
 <div id="screen-history" class="screen">
+
+  <div class="card">
+    <div class="card-title">基準値（位置別）</div>
+    <div id="baseline-status-list"></div>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <div style="font-size:13px;font-weight:700;">計測履歴</div>
+    <button class="small-btn" id="btn-edit-history" onclick="toggleEditMode()">✏️ 編集</button>
+  </div>
+
   <div id="hist-empty" class="empty">
     <div class="empty-icon">📭</div>
-    <div class="empty-text">計測データがありません</div>
+    <div class="empty-text">まだ計測データがありません<br>「記録」タブから計測してください</div>
   </div>
   <div id="hist-list"></div>
-  <button class="btn btn-danger" id="btn-clear" onclick="clearAll()" style="display:none;">🗑️ データをすべて削除</button>
+  <button class="btn btn-danger" id="btn-clear" onclick="clearAll()" style="display:none;">🗑️ 履歴をすべて削除</button>
+  <div class="spacer"></div>
+</div>
+
+<!-- ═══════════════ CHART ═══════════════ -->
+<div id="screen-chart" class="screen">
+
+  <div class="segmented">
+    <div class="seg-btn active" id="seg-odo" onclick="setChartXMode('odo')">走行距離</div>
+    <div class="seg-btn" id="seg-date" onclick="setChartXMode('date')">日付</div>
+  </div>
+
+  <div class="chip-row">
+    <div class="chip active" id="chip-dashboard" onclick="toggleChip('dashboard')"><span class="chip-dot" style="background:var(--pos-dash)"></span>📱 ダッシュボード</div>
+    <div class="chip active" id="chip-holder" onclick="toggleChip('holder')"><span class="chip-dot" style="background:var(--pos-holder)"></span>🔒 ホルダ</div>
+    <div class="chip active" id="chip-engine_room" onclick="toggleChip('engine_room')"><span class="chip-dot" style="background:var(--pos-engine)"></span>🔧 エンジンルーム</div>
+  </div>
+
+  <div class="chart-legend-note">⭐大きい点＝オイル交換直後の計測</div>
+
+  <div id="chart-empty" class="empty">
+    <div class="empty-icon">📭</div>
+    <div class="empty-text">まだ計測データがありません</div>
+  </div>
+  <div class="chart-wrap" id="chart-wrap"></div>
+
   <div class="spacer"></div>
 </div>
 
@@ -443,46 +318,62 @@
   <div class="card">
     <div class="card-title">車両情報</div>
     <div class="settings-row">
-      <div class="input-group">
-        <div class="input-label">メーカー</div>
-        <input type="text" class="text-input" id="car-maker" placeholder="例: トヨタ" oninput="autoSaveCar()">
-      </div>
-      <div class="input-group">
-        <div class="input-label">車種</div>
-        <input type="text" class="text-input" id="car-model" placeholder="例: プリウス" oninput="autoSaveCar()">
-      </div>
+      <div class="input-group"><div class="input-label">メーカー</div><input type="text" class="text-input" id="car-maker" placeholder="例: トヨタ" oninput="autoSaveCar()"></div>
+      <div class="input-group"><div class="input-label">車種</div><input type="text" class="text-input" id="car-model" placeholder="例: プリウス" oninput="autoSaveCar()"></div>
     </div>
     <div class="settings-row" style="margin-top:10px;">
-      <div class="input-group">
-        <div class="input-label">年式</div>
-        <input type="number" class="text-input" id="car-year" placeholder="2020" inputmode="numeric" oninput="autoSaveCar()">
+      <div class="input-group"><div class="input-label">年式</div><input type="number" class="text-input" id="car-year" placeholder="2020" inputmode="numeric" oninput="autoSaveCar()"></div>
+      <div class="input-group"><div class="input-label">記録開始時の走行距離 (km)</div><input type="number" class="text-input" id="car-odo" placeholder="50000" inputmode="numeric" oninput="autoSaveCar()"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">オイル交換タイミング設定（任意）</div>
+    <div class="note" style="margin-bottom:14px;">いずれか1つでも超えると履歴に警告が表示されます。空欄の項目は判定対象外です。</div>
+
+    <div class="cond-group">
+      <div class="cond-label">走行距離のめやす <span class="badge-opt">任意</span></div>
+      <div class="input-pair">
+        <input type="number" class="text-input" id="th-km" placeholder="5" min="0" inputmode="numeric" oninput="autoSaveCar()">
+        <div class="input-unit">× 1000km</div>
       </div>
-      <div class="input-group">
-        <div class="input-label">記録開始時の走行距離 (km)</div>
-        <input type="number" class="text-input" id="car-odo" placeholder="50000" inputmode="numeric" oninput="autoSaveCar()">
+    </div>
+    <div class="cond-group">
+      <div class="cond-label">経過期間のめやす <span class="badge-opt">任意</span></div>
+      <div class="input-pair">
+        <input type="number" class="text-input" id="th-months" placeholder="6" min="0" inputmode="numeric" oninput="autoSaveCar()">
+        <div class="input-unit">ヶ月</div>
+      </div>
+    </div>
+    <div class="cond-group">
+      <div class="cond-label">振動悪化率のめやす <span class="badge-opt">任意</span></div>
+      <div class="input-pair">
+        <input type="number" class="text-input" id="th-pct" placeholder="30" min="0" inputmode="numeric" oninput="autoSaveCar()">
+        <div class="input-unit">%</div>
       </div>
     </div>
   </div>
 
   <div class="future-card">
-    <div class="card-title">🔮 将来実装予定 — クラウド比較機能</div>
+    <div class="card-title">🔮 将来実装予定</div>
     <div class="f-item"><div class="f-icon">📊</div><div>同車種・同設置位置のユーザーデータと比較し、自分のオイル劣化が平均的にどの程度かを把握できます</div></div>
-    <div class="f-item"><div class="f-icon">🗺️</div><div>走行環境（都市部・高速道路メインなど）による劣化傾向の違いも確認できるようにする予定です</div></div>
+    <div class="f-item"><div class="f-icon">🎤</div><div>ノイズレベル測定機能を追加し、振動データと合わせた複合判定に対応予定です</div></div>
     <div class="f-item"><div class="f-icon">🔒</div><div>データは匿名化して収集し、個人を特定する情報は一切送信しません</div></div>
   </div>
 
   <div class="spacer"></div>
 </div>
 
-<!-- TOAST -->
 <div class="toast" id="toast">✅ 保存しました</div>
 
 <script>
-// ═══════════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════════
+const POS = [
+  { key:'dashboard',    label:'ダッシュボード上',                 icon:'📱', color:'var(--pos-dash)',  hex:'#4fc3f7' },
+  { key:'holder',       label:'スマホホルダ固定',                 icon:'🔒', color:'var(--pos-holder)', hex:'#ab47bc' },
+  { key:'engine_room',  label:'エンジンルーム内',                 icon:'🔧', color:'var(--pos-engine)', hex:'#26a69a' }
+];
+
 let measuring   = false;
-let measureMode = null;
 let samples     = [];
 let motionCb    = null;
 let timerInt    = null;
@@ -491,43 +382,35 @@ let hpLast      = {x:0,y:0,z:0};
 let hpFilt      = {x:0,y:0,z:0};
 let toastTimer  = null;
 let carTimer    = null;
+let historyEditMode = false;
+let chartXMode  = 'odo';
+let chartVisible = { dashboard:true, holder:true, engine_room:true };
 const HP_ALPHA  = 0.85;
 const DURATION  = 30;
 const NUM_BARS  = 22;
 
-// ═══════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
   buildWaveform();
   initLiveMeter();
   loadCarSettings();
-  refreshCheckScreen();
+  updateOdoHint();
   refreshHistory();
 });
 
-// ═══════════════════════════════════════════════
-// TABS
-// ═══════════════════════════════════════════════
 function switchTab(name) {
-  const names = ['baseline','check','history','settings'];
-  document.querySelectorAll('.tab').forEach((t,i) =>
-    t.classList.toggle('active', names[i] === name));
-  document.querySelectorAll('.screen').forEach((s,i) =>
-    s.classList.toggle('active', names[i] === name));
-  if (name === 'check')   refreshCheckScreen();
+  const names = ['record','history','chart','settings'];
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i] === name));
+  document.querySelectorAll('.screen').forEach((s,i) => s.classList.toggle('active', names[i] === name));
   if (name === 'history') refreshHistory();
+  if (name === 'chart')   renderChart();
+  if (name === 'record')  updateOdoHint();
 }
 
-// ═══════════════════════════════════════════════
-// WAVEFORM
-// ═══════════════════════════════════════════════
 function buildWaveform() {
   const wf = el('waveform');
   for (let i = 0; i < NUM_BARS; i++) {
     const b = document.createElement('div');
-    b.className = 'wave-bar';
-    b.style.height = '4px';
+    b.className = 'wave-bar'; b.style.height = '4px';
     wf.appendChild(b);
   }
 }
@@ -539,9 +422,6 @@ function updateWaveform(rmsVal) {
   });
 }
 
-// ═══════════════════════════════════════════════
-// LIVE METER
-// ═══════════════════════════════════════════════
 function initLiveMeter() {
   if (typeof DeviceMotionEvent === 'undefined') { el('live-val').textContent = 'センサーなし'; return; }
   if (typeof DeviceMotionEvent.requestPermission === 'function') { el('live-val').textContent = '許可が必要'; return; }
@@ -564,13 +444,8 @@ function attachLiveListener() {
   }, 100);
 }
 
-// ═══════════════════════════════════════════════
-// PERMISSION (iOS 13+)
-// ═══════════════════════════════════════════════
 async function ensurePermission() {
-  if (typeof DeviceMotionEvent === 'undefined') {
-    alert('このデバイスは加速度センサーに対応していません。'); return false;
-  }
+  if (typeof DeviceMotionEvent === 'undefined') { alert('このデバイスは加速度センサーに対応していません。'); return false; }
   if (typeof DeviceMotionEvent.requestPermission === 'function') {
     try {
       const res = await DeviceMotionEvent.requestPermission();
@@ -584,9 +459,6 @@ async function ensurePermission() {
   return true;
 }
 
-// ═══════════════════════════════════════════════
-// HP FILTER + DSP
-// ═══════════════════════════════════════════════
 function applyHP(x, y, z) {
   hpFilt.x = HP_ALPHA * (hpFilt.x + x - hpLast.x);
   hpFilt.y = HP_ALPHA * (hpFilt.y + y - hpLast.y);
@@ -595,70 +467,52 @@ function applyHP(x, y, z) {
   return {...hpFilt};
 }
 function mag(v) { return Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z); }
-function rms(arr) {
-  if (!arr.length) return 0;
-  return Math.sqrt(arr.reduce((s,v) => s+v*v, 0) / arr.length);
-}
+function rms(arr) { if (!arr.length) return 0; return Math.sqrt(arr.reduce((s,v) => s+v*v, 0) / arr.length); }
 function resetHP() { hpLast = {x:0,y:0,z:0}; hpFilt = {x:0,y:0,z:0}; }
 
-// ═══════════════════════════════════════════════
-// VALIDATION
-// ═══════════════════════════════════════════════
-function radioVal(name) {
-  const c = document.querySelector(`input[name="${name}"]:checked`);
-  return c ? c.value : null;
-}
-function validateBaseline() {
-  const pos    = radioVal('bl-pos');
-  const timing = radioVal('bl-timing');
-  el('bl-cond-pos').classList.toggle('has-error', !pos);
-  el('bl-cond-timing').classList.toggle('has-error', !timing);
-  if (!pos || !timing) {
-    document.querySelector('#screen-baseline .card').scrollIntoView({behavior:'smooth'});
-    return false;
-  }
-  return true;
-}
-function validateCheck() {
-  const pos = radioVal('chk-pos');
-  el('chk-cond-pos').classList.toggle('has-error', !pos);
-  if (!pos) {
-    document.querySelector('#screen-check .card').scrollIntoView({behavior:'smooth'});
-    return false;
-  }
-  return true;
+function radioVal(name) { const c = document.querySelector(`input[name="${name}"]:checked`); return c ? c.value : null; }
+
+function validateRecord() {
+  let ok = true;
+  const odo = el('rec-odo').value;
+  if (!odo || +odo <= 0) { el('rec-odo').style.borderColor = 'var(--red)'; ok = false; }
+  else { el('rec-odo').style.borderColor = ''; }
+
+  const pos = radioVal('rec-pos');
+  el('rec-cond-pos').classList.toggle('has-error', !pos);
+  if (!pos) ok = false;
+
+  if (!ok) document.querySelector('#screen-record .card').scrollIntoView({behavior:'smooth'});
+  return ok;
 }
 
-// ═══════════════════════════════════════════════
-// COUNTDOWN
-// ═══════════════════════════════════════════════
-function startCountdown(ringId, numId, barId, onDone) {
+function startCountdown(onDone) {
   const CIRC = 238.1;
   let rem = DURATION;
   timerInt = setInterval(() => {
     rem--;
-    el(numId).textContent = rem;
-    el(ringId).style.strokeDashoffset = CIRC - ((DURATION - rem) / DURATION) * CIRC;
-    el(barId).style.width = ((DURATION - rem) / DURATION * 100) + '%';
+    el('rec-count').textContent = rem;
+    el('rec-ring').style.strokeDashoffset = CIRC - ((DURATION - rem) / DURATION) * CIRC;
+    el('rec-bar').style.width = ((DURATION - rem) / DURATION * 100) + '%';
     if (rem <= 0) { stopCountdown(); onDone(); }
   }, 1000);
 }
 function stopCountdown() { clearInterval(timerInt); timerInt = null; }
 
-// ═══════════════════════════════════════════════
-// BASELINE
-// ═══════════════════════════════════════════════
-async function startBaseline() {
-  if (!validateBaseline()) return;
+async function startRecording() {
+  if (!validateRecord()) return;
   if (!await ensurePermission()) return;
-  measuring = true; measureMode = 'baseline'; samples = []; resetHP();
+  measuring = true; samples = []; resetHP();
 
-  el('btn-bl-start').style.display  = 'none';
-  el('btn-bl-cancel').style.display = 'block';
-  el('bl-progress').style.display   = 'block';
-  el('bl-result').style.display     = 'none';
+  el('btn-rec-start').style.display  = 'none';
+  el('btn-rec-cancel').style.display = 'block';
+  el('rec-progress').style.display   = 'block';
+  el('rec-result').style.display     = 'none';
+  el('rec-count').textContent = DURATION;
+  el('rec-ring').style.strokeDashoffset = 238.1;
+  el('rec-bar').style.width = '0%';
 
-  startCountdown('bl-ring', 'bl-count', 'bl-bar', finishBaseline);
+  startCountdown(finishRecording);
 
   motionCb = e => {
     const v = mag(applyHP(
@@ -669,135 +523,88 @@ async function startBaseline() {
     samples.push(v);
     el('live-val').textContent = v.toFixed(4);
     updateWaveform(v);
-    el('bl-status').textContent = `収集中: ${samples.length} サンプル`;
+    el('rec-status').textContent = `収集中: ${samples.length} サンプル`;
   };
   window.addEventListener('devicemotion', motionCb);
 }
 
-function finishBaseline() {
-  if (!measuring || measureMode !== 'baseline') return;
+function finishRecording() {
+  if (!measuring) return;
   window.removeEventListener('devicemotion', motionCb);
   measuring = false;
 
-  const r   = rms(samples);
+  const r = rms(samples);
   const now = new Date();
-  const cond = {
-    phonePos:        radioVal('bl-pos'),
-    timing:          radioVal('bl-timing'),
-    kmSinceChange:   el('bl-km').value   ? +el('bl-km').value   : null,
-    daysSinceChange: el('bl-days').value ? +el('bl-days').value : null
+  const pos = radioVal('rec-pos');
+  const rec = {
+    id: genId(),
+    date: now.toISOString(),
+    odometer: +el('rec-odo').value,
+    justChanged: el('rec-justchanged').checked,
+    phonePos: pos,
+    rms: r,
+    samples: samples.length
   };
 
-  localStorage.setItem('oilsense_bl', JSON.stringify({ rms: r, date: now.toISOString(), samples: samples.length, conditions: cond }));
-  pushHistory({ type:'baseline', date: now.toISOString(), rms: r, deg: 0, samples: samples.length, conditions: cond });
+  const recs = getRecords();
+  recs.push(rec);
+  localStorage.setItem('oilsense_records', JSON.stringify(recs));
 
-  el('bl-progress').style.display   = 'none';
-  el('bl-result').style.display     = 'block';
-  el('btn-bl-start').style.display  = 'block';
-  el('btn-bl-start').textContent    = '🔄 ベースラインを再記録';
-  el('btn-bl-cancel').style.display = 'none';
-  el('bl-rms-disp').textContent     = r.toFixed(5) + ' g';
-  el('bl-date-disp').textContent    = fmtDate(now);
-  el('bl-smp-disp').textContent     = samples.length + ' 件';
+  el('rec-progress').style.display   = 'none';
+  el('rec-result').style.display     = 'block';
+  el('btn-rec-start').style.display  = 'block';
+  el('btn-rec-start').textContent    = '🔴 計測開始';
+  el('btn-rec-cancel').style.display = 'none';
+
+  el('res-rms').textContent = r.toFixed(5) + ' g';
+  el('res-odo').textContent = rec.odometer.toLocaleString() + ' km';
+
+  const baselines = getBaselines();
+  const blId = baselines[pos];
+  const bl = blId ? recs.find(x => x.id === blId) : null;
+  if (bl && bl.id !== rec.id) {
+    const deg = (r - bl.rms) / bl.rms * 100;
+    el('res-deg').textContent = (deg >= 0 ? '+' : '') + deg.toFixed(1) + '%';
+    el('res-deg').style.color = warnColor(deg);
+  } else {
+    el('res-deg').textContent = '基準値未設定';
+    el('res-deg').style.color = 'var(--text2)';
+  }
+
+  el('res-hint').textContent = rec.justChanged
+    ? '🆕 オイル交換直後として記録されました。履歴タブから「基準値に設定」できます。'
+    : '履歴タブで過去の記録と比較できます。';
+
+  el('rec-justchanged').checked = false;
+  updateOdoHint();
 }
 
-// ═══════════════════════════════════════════════
-// CHECK
-// ═══════════════════════════════════════════════
-function refreshCheckScreen() {
-  const bl = getBaseline();
-  el('check-no-bl').style.display = bl ? 'none'  : 'block';
-  el('check-main').style.display  = bl ? 'block' : 'none';
-}
-
-async function startCheck() {
-  if (!validateCheck()) return;
-  if (!await ensurePermission()) return;
-  measuring = true; measureMode = 'check'; samples = []; resetHP();
-
-  el('btn-chk-start').style.display  = 'none';
-  el('btn-chk-cancel').style.display = 'block';
-  el('check-progress').style.display = 'block';
-  el('check-result').style.display   = 'none';
-
-  startCountdown('chk-ring', 'chk-count', 'chk-bar', finishCheck);
-
-  motionCb = e => {
-    samples.push(mag(applyHP(
-      e.accelerationIncludingGravity?.x || 0,
-      e.accelerationIncludingGravity?.y || 0,
-      e.accelerationIncludingGravity?.z || 0
-    )));
-  };
-  window.addEventListener('devicemotion', motionCb);
-}
-
-function finishCheck() {
-  if (!measuring || measureMode !== 'check') return;
-  window.removeEventListener('devicemotion', motionCb);
-  measuring = false;
-
-  const cur  = rms(samples);
-  const bl   = getBaseline();
-  const deg  = ((cur - bl.rms) / bl.rms) * 100;
-  const now  = new Date();
-  const cond = {
-    phonePos:        radioVal('chk-pos'),
-    kmSinceChange:   el('chk-km').value   ? +el('chk-km').value   : null,
-    daysSinceChange: el('chk-days').value ? +el('chk-days').value : null
-  };
-
-  pushHistory({ type:'check', date: now.toISOString(), rms: cur, deg: deg, samples: samples.length, conditions: cond });
-
-  const CIRC = 427.3;
-  const arc  = el('gauge-arc');
-  arc.style.strokeDashoffset = CIRC - (Math.max(0, Math.min(deg,120)) / 120) * CIRC;
-  const color = warnColor(deg);
-  arc.style.stroke = color;
-
-  el('gauge-pct').textContent = (deg >= 0 ? '+' : '') + deg.toFixed(1) + '%';
-  el('gauge-pct').style.color = color;
-
-  const w = warning(deg);
-  el('warn-badge').className    = 'warn-badge ' + w.cls;
-  el('warn-icon').textContent   = w.icon;
-  el('warn-msg').textContent    = w.msg;
-  el('warn-sub').textContent    = w.sub;
-  el('detail-bl').textContent   = bl.rms.toFixed(5) + ' g';
-  el('detail-cur').textContent  = cur.toFixed(5) + ' g';
-  el('detail-deg').textContent  = (deg >= 0 ? '+' : '') + deg.toFixed(1) + '%';
-  el('detail-deg').style.color  = color;
-
-  el('check-progress').style.display  = 'none';
-  el('check-result').style.display    = 'block';
-  el('btn-chk-start').style.display   = 'block';
-  el('btn-chk-start').textContent     = '🔄 再計測';
-  el('btn-chk-cancel').style.display  = 'none';
-}
-
-// ═══════════════════════════════════════════════
-// CANCEL
-// ═══════════════════════════════════════════════
 function cancelMeasurement() {
   stopCountdown();
   if (motionCb) { window.removeEventListener('devicemotion', motionCb); motionCb = null; }
-  measuring = false; measureMode = null;
-  el('bl-progress').style.display    = 'none';
-  el('btn-bl-start').style.display   = 'block';
-  el('btn-bl-cancel').style.display  = 'none';
-  el('check-progress').style.display  = 'none';
-  el('btn-chk-start').style.display   = 'block';
-  el('btn-chk-cancel').style.display  = 'none';
+  measuring = false;
+  el('rec-progress').style.display   = 'none';
+  el('btn-rec-start').style.display  = 'block';
+  el('btn-rec-cancel').style.display = 'none';
 }
 
-// ═══════════════════════════════════════════════
-// WARNING LOGIC
-// ═══════════════════════════════════════════════
+function updateOdoHint() {
+  const recs = getRecords();
+  let hint = null;
+  if (recs.length) {
+    hint = recs.reduce((a,b) => new Date(a.date) > new Date(b.date) ? a : b).odometer;
+  } else {
+    const car = getCar();
+    if (car.odo) hint = +car.odo;
+  }
+  el('rec-odo-hint').textContent = hint != null ? `前回計測: ${hint.toLocaleString()} km` : '';
+}
+
 function warning(deg) {
-  if (deg < 20) return {cls:'lv-ok',      icon:'✅',  msg:'まだOK',               sub:'オイルは良好な状態です。引き続き定期チェックを。'};
-  if (deg < 40) return {cls:'lv-caution', icon:'⚠️', msg:'交換を推奨',            sub:'劣化が見られます。近いうちに交換を検討してください。'};
-  if (deg < 60) return {cls:'lv-warning', icon:'🔶', msg:'早めに交換を',           sub:'劣化が進んでいます。今月中に交換することをお勧めします。'};
-  return              {cls:'lv-danger',  icon:'🚨', msg:'今すぐ交換してください！', sub:'オイルが著しく劣化しています。エンジンへの悪影響の恐れがあります。'};
+  if (deg < 20) return {cls:'lv-ok',      icon:'✅',  msg:'まだOK'};
+  if (deg < 40) return {cls:'lv-caution', icon:'⚠️', msg:'交換を推奨'};
+  if (deg < 60) return {cls:'lv-warning', icon:'🔶', msg:'早めに交換を'};
+  return              {cls:'lv-danger',  icon:'🚨', msg:'今すぐ交換を'};
 }
 function warnColor(deg) {
   if (deg < 20) return '#66bb6a';
@@ -806,74 +613,197 @@ function warnColor(deg) {
   return '#f44336';
 }
 
-// ═══════════════════════════════════════════════
-// HISTORY
-// ═══════════════════════════════════════════════
-function pushHistory(entry) {
-  const h = getHistory(); h.push(entry);
-  localStorage.setItem('oilsense_hist', JSON.stringify(h));
+function genId() { return 'r_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+function getCar()       { try { return JSON.parse(localStorage.getItem('oilsense_car')       || '{}'); } catch { return {}; } }
+function getRecords()   { try { return JSON.parse(localStorage.getItem('oilsense_records')   || '[]'); } catch { return []; } }
+function getBaselines() { try { return JSON.parse(localStorage.getItem('oilsense_baselines') || '{}'); } catch { return {}; } }
+
+function setBaseline(id, posKey) {
+  const baselines = getBaselines();
+  baselines[posKey] = id;
+  localStorage.setItem('oilsense_baselines', JSON.stringify(baselines));
+  refreshHistory();
+  showToast('⭐ 基準値に設定しました');
 }
-function getHistory()  { try { return JSON.parse(localStorage.getItem('oilsense_hist') || '[]'); } catch { return []; } }
-function getBaseline() { try { return JSON.parse(localStorage.getItem('oilsense_bl')); } catch { return null; } }
+
+function deleteRecord(id) {
+  if (!confirm('この記録を削除しますか？')) return;
+  const recs = getRecords().filter(r => r.id !== id);
+  localStorage.setItem('oilsense_records', JSON.stringify(recs));
+  const baselines = getBaselines();
+  let changed = false;
+  POS.forEach(p => { if (baselines[p.key] === id) { baselines[p.key] = null; changed = true; } });
+  if (changed) localStorage.setItem('oilsense_baselines', JSON.stringify(baselines));
+  refreshHistory();
+}
+
+function toggleEditMode() {
+  historyEditMode = !historyEditMode;
+  el('btn-edit-history').textContent = historyEditMode ? '✅ 完了' : '✏️ 編集';
+  refreshHistory();
+}
+
+function checkThresholdWarning(r, bl) {
+  const car = getCar();
+  const reasons = [];
+  const deltaKm = r.odometer - bl.odometer;
+  const deltaDays = (new Date(r.date) - new Date(bl.date)) / 86400000;
+  const deltaMonths = deltaDays / 30;
+  const degPct = (r.rms - bl.rms) / bl.rms * 100;
+  if (car.thresholdKm && deltaKm >= car.thresholdKm * 1000) reasons.push('距離');
+  if (car.thresholdMonths && deltaMonths >= car.thresholdMonths) reasons.push('期間');
+  if (car.thresholdPct && degPct >= car.thresholdPct) reasons.push('劣化率');
+  return reasons;
+}
+
+function renderBaselineStatus() {
+  const recs = getRecords();
+  const baselines = getBaselines();
+  el('baseline-status-list').innerHTML = POS.map(p => {
+    const id = baselines[p.key];
+    const r = id ? recs.find(x => x.id === id) : null;
+    const valTxt = r ? `${r.rms.toFixed(4)} g (${fmtDate(new Date(r.date))})` : '未設定';
+    return `<div class="bl-status-row">
+      <span>${p.icon} ${p.label}</span>
+      <span style="color:${r ? p.color : 'var(--text2)'}">${valTxt}</span>
+    </div>`;
+  }).join('');
+}
 
 function refreshHistory() {
-  const h = getHistory();
+  renderBaselineStatus();
+  const recs = getRecords();
+  const baselines = getBaselines();
   const list = el('hist-list'), empty = el('hist-empty'), clr = el('btn-clear');
-  if (!h.length) { empty.style.display = 'block'; list.innerHTML = ''; clr.style.display = 'none'; return; }
+
+  if (!recs.length) { empty.style.display = 'block'; list.innerHTML = ''; clr.style.display = 'none'; return; }
   empty.style.display = 'none'; clr.style.display = 'block';
 
-  list.innerHTML = [...h].reverse().map(e => {
-    const isBl  = e.type === 'baseline';
-    const color = isBl ? '#4fc3f7' : warnColor(e.deg);
-    const date  = new Date(e.date);
-    const label = isBl ? '🔧 ベースライン登録' : warning(e.deg).msg;
-    const pctTx = isBl ? '基準値' : (e.deg >= 0 ? '+' : '') + e.deg.toFixed(1) + '%';
-    const cond  = e.conditions || {};
-    const tags  = [
-      cond.phonePos,
-      cond.timing,
-      cond.kmSinceChange   != null ? `走行 ${cond.kmSinceChange.toLocaleString()} km` : null,
-      cond.daysSinceChange != null ? `${cond.daysSinceChange} 日経過` : null
-    ].filter(Boolean);
+  list.innerHTML = [...recs].sort((a,b) => new Date(b.date) - new Date(a.date)).map(r => {
+    const pos = POS.find(p => p.key === r.phonePos);
+    const blId = baselines[r.phonePos];
+    const bl = blId ? recs.find(x => x.id === blId) : null;
+    const isBaseline = blId === r.id;
+
+    let pctHtml;
+    if (isBaseline) {
+      pctHtml = `<span style="color:${pos.hex}">⭐ 基準値</span>`;
+    } else if (bl) {
+      const deg = (r.rms - bl.rms) / bl.rms * 100;
+      pctHtml = `<span style="color:${warnColor(deg)}">${deg >= 0 ? '+' : ''}${deg.toFixed(1)}%</span>`;
+    } else {
+      pctHtml = `<span style="color:var(--text2)">基準値未設定</span>`;
+    }
+
+    let warnHtml = '';
+    if (bl && !isBaseline) {
+      const reasons = checkThresholdWarning(r, bl);
+      if (reasons.length) warnHtml = `<div class="warn-tag">⚠️ 交換タイミング超過（${reasons.join('・')}）</div>`;
+    }
+
+    const tags = [`${pos.icon} ${pos.label}`, r.justChanged ? '🆕 交換直後' : null].filter(Boolean);
+
+    const actionHtml = historyEditMode
+      ? `<button class="edit-del-btn" onclick="deleteRecord('${r.id}')">🗑️ 削除</button>`
+      : (!isBaseline ? `<button class="set-bl-btn" onclick="setBaseline('${r.id}','${r.phonePos}')">⭐ 基準値に設定</button>` : '');
 
     return `<div class="history-item">
       <div class="h-main">
-        <div class="h-dot" style="background:${color}"></div>
+        <div class="h-dot" style="background:${pos.hex}"></div>
         <div class="h-info">
-          <div class="h-date">${fmtDate(date)}</div>
-          <div class="h-type" style="color:${color}">${label}</div>
+          <div class="h-date">${fmtDate(new Date(r.date))} ・ ${r.odometer.toLocaleString()} km</div>
+          <div class="h-type">${pctHtml}</div>
+          ${warnHtml}
         </div>
-        <div>
-          <div class="h-pct" style="color:${color}">${pctTx}</div>
-          <div class="h-rms">${e.rms.toFixed(4)} g</div>
+        <div style="text-align:right;">
+          <div class="h-rms">${r.rms.toFixed(4)} g</div>
+          ${actionHtml}
         </div>
       </div>
-      ${tags.length ? `<div class="h-tags">${tags.map(t => `<span class="h-tag">${t}</span>`).join('')}</div>` : ''}
+      <div class="h-tags">${tags.map(t => `<span class="h-tag">${t}</span>`).join('')}</div>
     </div>`;
   }).join('');
 }
 
 function clearAll() {
-  if (!confirm('すべてのデータ（ベースライン含む）を削除しますか？')) return;
-  localStorage.removeItem('oilsense_bl');
-  localStorage.removeItem('oilsense_hist');
-  refreshHistory(); refreshCheckScreen();
-  el('bl-result').style.display = 'none';
-  el('btn-bl-start').textContent = '🔴 ベースライン記録開始';
+  if (!confirm('履歴と基準値設定をすべて削除しますか？（車両情報・設定は残ります）')) return;
+  localStorage.removeItem('oilsense_records');
+  localStorage.removeItem('oilsense_baselines');
+  refreshHistory();
 }
 
-// ═══════════════════════════════════════════════
-// SETTINGS / CAR INFO
-// ═══════════════════════════════════════════════
+function setChartXMode(mode) {
+  chartXMode = mode;
+  el('seg-odo').classList.toggle('active', mode === 'odo');
+  el('seg-date').classList.toggle('active', mode === 'date');
+  renderChart();
+}
+function toggleChip(key) {
+  chartVisible[key] = !chartVisible[key];
+  el('chip-' + key).classList.toggle('active', chartVisible[key]);
+  renderChart();
+}
+
+function renderChart() {
+  const all = getRecords();
+  const wrap = el('chart-wrap');
+  if (!all.length) { el('chart-empty').style.display = 'block'; wrap.innerHTML = ''; return; }
+  el('chart-empty').style.display = 'none';
+
+  const visible = all.filter(r => chartVisible[r.phonePos]);
+  const W = 320, H = 220, padL = 42, padR = 10, padT = 14, padB = 26;
+  const cw = W - padL - padR, ch = H - padT - padB;
+
+  const xVal = r => chartXMode === 'odo' ? r.odometer : new Date(r.date).getTime();
+  const xs = visible.map(xVal);
+  const ys = visible.map(r => r.rms);
+  let xMin = xs.length ? Math.min(...xs) : 0, xMax = xs.length ? Math.max(...xs) : 1;
+  let yMax = ys.length ? Math.max(...ys) * 1.15 : 1;
+  if (xMin === xMax) { xMin -= 1; xMax += 1; }
+  if (yMax === 0) yMax = 1;
+
+  const sx = v => padL + (v - xMin) / (xMax - xMin) * cw;
+  const sy = v => padT + ch - (v / yMax) * ch;
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%">`;
+  for (let i = 0; i <= 4; i++) {
+    const gy = padT + ch - (i / 4) * ch;
+    const val = (yMax * i / 4).toFixed(3);
+    svg += `<line x1="${padL}" y1="${gy}" x2="${W - padR}" y2="${gy}" stroke="#2a3555" stroke-width="1"/>`;
+    svg += `<text x="${padL - 4}" y="${gy + 3}" font-size="7" fill="#8899bb" text-anchor="end">${val}</text>`;
+  }
+  const xLabel = v => chartXMode === 'odo' ? Math.round(v).toLocaleString() + 'km' : fmtShortDate(new Date(v));
+  svg += `<text x="${padL}" y="${H - 6}" font-size="7" fill="#8899bb">${xLabel(xMin)}</text>`;
+  svg += `<text x="${W - padR}" y="${H - 6}" font-size="7" fill="#8899bb" text-anchor="end">${xLabel(xMax)}</text>`;
+
+  POS.forEach(p => {
+    if (!chartVisible[p.key]) return;
+    const pts = all.filter(r => r.phonePos === p.key).sort((a,b) => xVal(a) - xVal(b));
+    if (!pts.length) return;
+    const poly = pts.map(r => `${sx(xVal(r))},${sy(r.rms)}`).join(' ');
+    svg += `<polyline points="${poly}" fill="none" stroke="${p.hex}" stroke-width="1.5" opacity="0.7"/>`;
+    pts.forEach(r => {
+      const cx = sx(xVal(r)), cy = sy(r.rms);
+      svg += r.justChanged
+        ? `<circle cx="${cx}" cy="${cy}" r="6" fill="${p.hex}" stroke="#fff" stroke-width="2"/>`
+        : `<circle cx="${cx}" cy="${cy}" r="3.5" fill="${p.hex}"/>`;
+    });
+  });
+  svg += `</svg>`;
+  wrap.innerHTML = svg;
+}
+
 function loadCarSettings() {
-  try {
-    const car = JSON.parse(localStorage.getItem('oilsense_car') || '{}');
-    if (car.maker) el('car-maker').value = car.maker;
-    if (car.model) el('car-model').value = car.model;
-    if (car.year)  el('car-year').value  = car.year;
-    if (car.odo)   el('car-odo').value   = car.odo;
-    updateHeaderSub(car);
-  } catch {}
+  const car = getCar();
+  if (car.maker) el('car-maker').value = car.maker;
+  if (car.model) el('car-model').value = car.model;
+  if (car.year)  el('car-year').value  = car.year;
+  if (car.odo)   el('car-odo').value   = car.odo;
+  if (car.thresholdKm)     el('th-km').value     = car.thresholdKm;
+  if (car.thresholdMonths) el('th-months').value = car.thresholdMonths;
+  if (car.thresholdPct)    el('th-pct').value    = car.thresholdPct;
+  updateHeaderSub(car);
 }
 
 function autoSaveCar() {
@@ -883,7 +813,10 @@ function autoSaveCar() {
       maker: el('car-maker').value.trim(),
       model: el('car-model').value.trim(),
       year:  el('car-year').value,
-      odo:   el('car-odo').value
+      odo:   el('car-odo').value,
+      thresholdKm:     el('th-km').value     ? +el('th-km').value     : null,
+      thresholdMonths: el('th-months').value ? +el('th-months').value : null,
+      thresholdPct:    el('th-pct').value    ? +el('th-pct').value    : null
     };
     localStorage.setItem('oilsense_car', JSON.stringify(car));
     updateHeaderSub(car);
@@ -896,9 +829,6 @@ function updateHeaderSub(car) {
   el('header-sub').textContent = parts.length ? parts.join(' ') : 'エンジンオイル劣化判定';
 }
 
-// ═══════════════════════════════════════════════
-// TOAST
-// ═══════════════════════════════════════════════
 function showToast(msg) {
   const t = el('toast');
   t.textContent = msg; t.classList.add('show');
@@ -906,13 +836,13 @@ function showToast(msg) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
 }
 
-// ═══════════════════════════════════════════════
-// UTILS
-// ═══════════════════════════════════════════════
 function el(id) { return document.getElementById(id); }
 function fmtDate(d) {
   const p = n => String(n).padStart(2,'0');
   return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function fmtShortDate(d) {
+  return `${String(d.getFullYear()).slice(2)}/${d.getMonth()+1}/${d.getDate()}`;
 }
 </script>
 </body>
