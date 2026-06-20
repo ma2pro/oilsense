@@ -85,10 +85,16 @@
     .input-unit { font-size: 12px; color: var(--text2); padding-bottom: 11px; white-space: nowrap; }
     .field-hint { font-size: 10px; color: var(--text2); margin-top: 5px; }
 
-    .meter-val { font-size: 44px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1; text-align: center; }
-    .meter-unit { font-size: 13px; color: var(--text2); text-align: center; margin-top: 4px; }
-    .waveform { display: flex; align-items: center; justify-content: center; gap: 3px; height: 50px; margin: 12px 0 4px; }
-    .wave-bar { width: 5px; border-radius: 3px; background: var(--accent); opacity: 0.6; transition: height 0.08s ease; }
+    .meter-val { font-size: 30px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1; text-align: center; }
+    .meter-unit { font-size: 11px; color: var(--text2); text-align: center; margin-top: 4px; }
+    .waveform { display: flex; align-items: center; justify-content: center; gap: 2px; height: 40px; margin: 10px 0 2px; }
+    .wave-bar { width: 4px; border-radius: 2px; background: var(--accent); opacity: 0.6; transition: height 0.08s ease; }
+
+    .live-row { display: flex; gap: 10px; align-items: center; }
+    .live-col-meter { flex: 1; min-width: 0; }
+    .live-col-progress { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+    .live-col-progress .ring-container { margin-bottom: 6px; }
+    .live-col-progress .progress-track { width: 100%; }
 
     .countdown-wrap { text-align: center; margin-bottom: 10px; }
     .ring-container { position: relative; width: 90px; height: 90px; display: inline-block; }
@@ -215,24 +221,14 @@
   <div class="note"><strong>📋 測定条件：</strong>エンジン暖機後（水温計安定後）、エアコンOFF、平坦な場所でアイドリング中に計測してください。</div>
 
   <div class="card">
-    <div class="card-title">ライブ振動モニター</div>
-    <div class="meter-val" id="live-val">— —</div>
-    <div class="meter-unit">g (RMS)</div>
-    <div class="waveform" id="waveform"></div>
-  </div>
-
-  <div class="card disabled-card">
-    <div class="card-title">🎤 ノイズレベル測定 <span class="badge-soon">次バージョンで実装予定</span></div>
-    <div class="noise-placeholder">
-      <div class="noise-icon">🔇</div>
-      <div class="noise-text">エンジン音のノイズレベルを参考値として記録する機能を準備中です。現在は動作しません。</div>
-    </div>
-  </div>
-
-  <div id="rec-progress" style="display:none;">
-    <div class="card">
-      <div class="card-title">計測中</div>
-      <div class="countdown-wrap">
+    <div class="card-title" id="live-card-title">ライブ振動モニター</div>
+    <div class="live-row">
+      <div class="live-col-meter">
+        <div class="meter-val" id="live-val">— —</div>
+        <div class="meter-unit">g (RMS)</div>
+        <div class="waveform" id="waveform"></div>
+      </div>
+      <div class="live-col-progress" id="rec-progress-col" style="display:none;">
         <div class="ring-container">
           <svg width="90" height="90" viewBox="0 0 90 90">
             <circle class="ring-bg" cx="45" cy="45" r="38"/>
@@ -240,9 +236,17 @@
           </svg>
           <div class="ring-num" id="rec-count">30</div>
         </div>
+        <div class="progress-track"><div class="progress-fill" id="rec-bar" style="width:0%"></div></div>
       </div>
-      <div class="progress-track"><div class="progress-fill" id="rec-bar" style="width:0%"></div></div>
-      <div class="status-msg" id="rec-status">センサーデータ収集中...</div>
+    </div>
+    <div class="status-msg" id="rec-status" style="display:none;">センサーデータ収集中...</div>
+  </div>
+
+  <div class="card disabled-card">
+    <div class="card-title">🎤 ノイズレベル測定 <span class="badge-soon">次バージョンで実装予定</span></div>
+    <div class="noise-placeholder">
+      <div class="noise-icon">🔇</div>
+      <div class="noise-text">エンジン音のノイズレベルを参考値として記録する機能を準備中です。現在は動作しません。</div>
     </div>
   </div>
 
@@ -387,7 +391,7 @@ let chartXMode  = 'odo';
 let chartVisible = { dashboard:true, holder:true, engine_room:true };
 const HP_ALPHA  = 0.85;
 const DURATION  = 30;
-const NUM_BARS  = 22;
+const NUM_BARS  = 14;
 
 document.addEventListener('DOMContentLoaded', () => {
   buildWaveform();
@@ -504,11 +508,14 @@ async function startRecording() {
   if (!await ensurePermission()) return;
   measuring = true; samples = []; resetHP();
 
-  el('btn-rec-start').style.display  = 'none';
-  el('btn-rec-cancel').style.display = 'block';
-  el('rec-progress').style.display   = 'block';
-  el('rec-result').style.display     = 'none';
+  el('btn-rec-start').style.display     = 'none';
+  el('btn-rec-cancel').style.display    = 'block';
+  el('rec-progress-col').style.display  = 'flex';
+  el('rec-status').style.display        = 'block';
+  el('live-card-title').textContent     = '🔴 計測中';
+  el('rec-result').style.display        = 'none';
   el('rec-count').textContent = DURATION;
+  el('live-card-title').scrollIntoView({behavior:'smooth', block:'center'});
   el('rec-ring').style.strokeDashoffset = 238.1;
   el('rec-bar').style.width = '0%';
 
@@ -550,7 +557,9 @@ function finishRecording() {
   recs.push(rec);
   localStorage.setItem('oilsense_records', JSON.stringify(recs));
 
-  el('rec-progress').style.display   = 'none';
+  el('rec-progress-col').style.display = 'none';
+  el('rec-status').style.display       = 'none';
+  el('live-card-title').textContent    = 'ライブ振動モニター';
   el('rec-result').style.display     = 'block';
   el('btn-rec-start').style.display  = 'block';
   el('btn-rec-start').textContent    = '🔴 計測開始';
@@ -583,7 +592,9 @@ function cancelMeasurement() {
   stopCountdown();
   if (motionCb) { window.removeEventListener('devicemotion', motionCb); motionCb = null; }
   measuring = false;
-  el('rec-progress').style.display   = 'none';
+  el('rec-progress-col').style.display = 'none';
+  el('rec-status').style.display       = 'none';
+  el('live-card-title').textContent    = 'ライブ振動モニター';
   el('btn-rec-start').style.display  = 'block';
   el('btn-rec-cancel').style.display = 'none';
 }
