@@ -129,7 +129,12 @@
     .h-tag { background: var(--bg3); border-radius: 4px; padding: 3px 7px; font-size: 10px; color: var(--text2); }
     .warn-tag { margin-top: 6px; font-size: 10px; color: #ef6c00; background: rgba(239,108,0,.12); border-radius: 6px; padding: 4px 8px; display: inline-block; }
     .edit-del-btn { background: rgba(244,67,54,.15); border: 1px solid var(--red); color: var(--red); border-radius: 6px; padding: 4px 8px; font-size: 11px; cursor: pointer; margin-top: 6px; }
-    .set-bl-btn { background: rgba(79,195,247,.12); border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; padding: 4px 8px; font-size: 10px; cursor: pointer; margin-top: 6px; white-space: nowrap; }
+    .set-bl-btn { background: rgba(79,195,247,.12); border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; padding: 4px 8px; font-size: 10px; cursor: pointer; margin-top: 6px; white-space: nowrap; display: block; }
+    .dl-btn { background: var(--bg3); border: 1px solid var(--border); color: var(--text2); border-radius: 6px; padding: 4px 8px; font-size: 10px; cursor: pointer; margin-top: 6px; white-space: nowrap; display: block; }
+    .memo-textarea { resize: vertical; min-height: 48px; font-family: inherit; }
+    .memo-input { width: 100%; margin-top: 8px; padding: 6px 8px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 11px; font-family: inherit; resize: vertical; outline: none; min-height: 34px; }
+    .memo-input:focus { border-color: var(--accent); }
+    .memo-input::placeholder { color: var(--text2); }
 
     .bl-status-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
     .bl-status-row:last-child { border-bottom: none; }
@@ -216,6 +221,11 @@
         <label class="radio-opt"><input type="radio" name="rec-pos" value="engine_room"><div class="radio-circle"></div><span>🔧 エンジンルーム内（エンジン直置き不可）</span></label>
       </div>
     </div>
+
+    <div class="cond-group">
+      <div class="cond-label">メモ <span class="badge-opt">任意</span></div>
+      <textarea class="text-input memo-textarea" id="rec-memo" rows="2" placeholder="例: オイル名はシェル ヒリックスウルトラ 0W-30。油温メーター読み100℃時のデータ。"></textarea>
+    </div>
   </div>
 
   <div class="note"><strong>📋 測定条件：</strong>エンジン暖機後（水温計安定後）、エアコンOFF、平坦な場所でアイドリング中に計測してください。</div>
@@ -242,11 +252,11 @@
     <div class="status-msg" id="rec-status" style="display:none;">センサーデータ収集中...</div>
   </div>
 
-  <div class="card disabled-card">
-    <div class="card-title">🎤 ノイズレベル測定 <span class="badge-soon">次バージョンで実装予定</span></div>
+  <div class="card">
+    <div class="card-title">🎤 ノイズレベル測定 <span class="badge-opt">参考値</span></div>
     <div class="noise-placeholder">
-      <div class="noise-icon">🔇</div>
-      <div class="noise-text">エンジン音のノイズレベルを参考値として記録する機能を準備中です。現在は動作しません。</div>
+      <div class="noise-icon">🔊</div>
+      <div class="noise-text">計測開始と同時にマイクで周囲音レベルも記録します（参考値）。オイル劣化の判定には使用していません。マイクの許可が必要です。</div>
     </div>
   </div>
 
@@ -257,6 +267,7 @@
         <div class="stat-box"><div class="stat-lbl">振動RMS</div><div class="stat-val" id="res-rms">—</div></div>
         <div class="stat-box"><div class="stat-lbl">走行距離</div><div class="stat-val" id="res-odo">—</div></div>
         <div class="stat-box"><div class="stat-lbl">基準値比</div><div class="stat-val" id="res-deg">—</div></div>
+        <div class="stat-box"><div class="stat-lbl">ノイズ</div><div class="stat-val" id="res-noise">—</div></div>
       </div>
       <div class="field-hint" id="res-hint" style="margin-top:10px;"></div>
     </div>
@@ -291,6 +302,11 @@
 
 <!-- ═══════════════ CHART ═══════════════ -->
 <div id="screen-chart" class="screen">
+
+  <div class="segmented">
+    <div class="seg-btn active" id="seg-metric-vibration" onclick="setChartMetric('vibration')">📈 振動</div>
+    <div class="seg-btn" id="seg-metric-noise" onclick="setChartMetric('noise')">🔊 ノイズ（参考）</div>
+  </div>
 
   <div class="segmented">
     <div class="seg-btn active" id="seg-odo" onclick="setChartXMode('odo')">走行距離</div>
@@ -361,7 +377,7 @@
   <div class="future-card">
     <div class="card-title">🔮 将来実装予定</div>
     <div class="f-item"><div class="f-icon">📊</div><div>同車種・同設置位置のユーザーデータと比較し、自分のオイル劣化が平均的にどの程度かを把握できます</div></div>
-    <div class="f-item"><div class="f-icon">🎤</div><div>ノイズレベル測定機能を追加し、振動データと合わせた複合判定に対応予定です</div></div>
+    <div class="f-item"><div class="f-icon">🎤</div><div>ノイズレベルは現在参考値として記録のみ。将来的には振動データと合わせた複合判定への活用を予定しています</div></div>
     <div class="f-item"><div class="f-icon">🔒</div><div>データは匿名化して収集し、個人を特定する情報は一切送信しません</div></div>
   </div>
 
@@ -388,10 +404,17 @@ let toastTimer  = null;
 let carTimer    = null;
 let historyEditMode = false;
 let chartXMode  = 'odo';
+let chartMetric = 'vibration';
 let chartVisible = { dashboard:true, holder:true, engine_room:true };
+let micStream    = null;
+let audioCtx     = null;
+let analyserNode = null;
+let noiseInterval = null;
+let noiseSamples  = [];
 const HP_ALPHA  = 0.85;
 const DURATION  = 30;
 const NUM_BARS  = 14;
+const RAW_KEEP_COUNT = 10;
 
 document.addEventListener('DOMContentLoaded', () => {
   buildWaveform();
@@ -472,7 +495,50 @@ function applyHP(x, y, z) {
 }
 function mag(v) { return Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z); }
 function rms(arr) { if (!arr.length) return 0; return Math.sqrt(arr.reduce((s,v) => s+v*v, 0) / arr.length); }
+
+function trimmedRms(arr, trimPct = 0.10) {
+  if (!arr.length) return 0;
+  if (arr.length < 20) return rms(arr);
+  const sorted = [...arr].sort((a, b) => a - b);
+  const cut = Math.floor(sorted.length * trimPct);
+  const trimmed = sorted.slice(cut, sorted.length - cut);
+  return rms(trimmed);
+}
 function resetHP() { hpLast = {x:0,y:0,z:0}; hpFilt = {x:0,y:0,z:0}; }
+
+async function ensureMicPermission() {
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    return true;
+  } catch (e) {
+    micStream = null;
+    return false;
+  }
+}
+
+function startNoiseCapture() {
+  noiseSamples = [];
+  if (!micStream) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioCtx.createMediaStreamSource(micStream);
+    analyserNode = audioCtx.createAnalyser();
+    analyserNode.fftSize = 1024;
+    source.connect(analyserNode);
+    const buf = new Float32Array(analyserNode.fftSize);
+    noiseInterval = setInterval(() => {
+      analyserNode.getFloatTimeDomainData(buf);
+      noiseSamples.push(rms(Array.from(buf)));
+    }, 100);
+  } catch (e) { /* noise capture unavailable on this device */ }
+}
+
+function stopNoiseCapture() {
+  if (noiseInterval) { clearInterval(noiseInterval); noiseInterval = null; }
+  if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
+  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  analyserNode = null;
+}
 
 function radioVal(name) { const c = document.querySelector(`input[name="${name}"]:checked`); return c ? c.value : null; }
 
@@ -506,7 +572,9 @@ function stopCountdown() { clearInterval(timerInt); timerInt = null; }
 async function startRecording() {
   if (!validateRecord()) return;
   if (!await ensurePermission()) return;
+  await ensureMicPermission();
   measuring = true; samples = []; resetHP();
+  startNoiseCapture();
 
   el('btn-rec-start').style.display     = 'none';
   el('btn-rec-cancel').style.display    = 'block';
@@ -539,8 +607,10 @@ function finishRecording() {
   if (!measuring) return;
   window.removeEventListener('devicemotion', motionCb);
   measuring = false;
+  stopNoiseCapture();
 
-  const r = rms(samples);
+  const r = trimmedRms(samples);
+  const noiseLevel = noiseSamples.length ? trimmedRms(noiseSamples) : null;
   const now = new Date();
   const pos = radioVal('rec-pos');
   const rec = {
@@ -550,11 +620,16 @@ function finishRecording() {
     justChanged: el('rec-justchanged').checked,
     phonePos: pos,
     rms: r,
-    samples: samples.length
+    samples: samples.length,
+    noiseLevel: noiseLevel,
+    memo: el('rec-memo').value.trim(),
+    rawSamples: samples.slice(),
+    rawNoiseSamples: noiseSamples.slice()
   };
 
-  const recs = getRecords();
+  let recs = getRecords();
   recs.push(rec);
+  recs = pruneRawData(recs);
   localStorage.setItem('oilsense_records', JSON.stringify(recs));
 
   el('rec-progress-col').style.display = 'none';
@@ -567,6 +642,7 @@ function finishRecording() {
 
   el('res-rms').textContent = r.toFixed(5) + ' g';
   el('res-odo').textContent = rec.odometer.toLocaleString() + ' km';
+  el('res-noise').textContent = noiseLevel != null ? noiseLevel.toFixed(5) : '未計測';
 
   const baselines = getBaselines();
   const blId = baselines[pos];
@@ -590,6 +666,7 @@ function finishRecording() {
 
 function cancelMeasurement() {
   stopCountdown();
+  stopNoiseCapture();
   if (motionCb) { window.removeEventListener('devicemotion', motionCb); motionCb = null; }
   measuring = false;
   el('rec-progress-col').style.display = 'none';
@@ -629,6 +706,53 @@ function genId() { return 'r_' + Date.now().toString(36) + Math.random().toStrin
 function getCar()       { try { return JSON.parse(localStorage.getItem('oilsense_car')       || '{}'); } catch { return {}; } }
 function getRecords()   { try { return JSON.parse(localStorage.getItem('oilsense_records')   || '[]'); } catch { return []; } }
 function getBaselines() { try { return JSON.parse(localStorage.getItem('oilsense_baselines') || '{}'); } catch { return {}; } }
+
+function pruneRawData(recs) {
+  const sorted = [...recs].sort((a, b) => new Date(b.date) - new Date(a.date));
+  const keepIds = new Set(sorted.slice(0, RAW_KEEP_COUNT).map(r => r.id));
+  return recs.map(r => {
+    if (keepIds.has(r.id)) return r;
+    if (r.rawSamples || r.rawNoiseSamples) {
+      const { rawSamples, rawNoiseSamples, ...rest } = r;
+      return rest;
+    }
+    return r;
+  });
+}
+
+function downloadRawData(id) {
+  const rec = getRecords().find(r => r.id === id);
+  if (!rec || !rec.rawSamples) return;
+  const data = {
+    id: rec.id, date: rec.date, odometer: rec.odometer, phonePos: rec.phonePos,
+    justChanged: rec.justChanged, rms: rec.rms, noiseLevel: rec.noiseLevel,
+    memo: rec.memo || '',
+    rawVibrationSamples: rec.rawSamples,
+    rawNoiseSamples: rec.rawNoiseSamples || []
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `oilsense_raw_${rec.id}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function saveMemo(id, value) {
+  const recs = getRecords();
+  const idx = recs.findIndex(r => r.id === id);
+  if (idx === -1) return;
+  recs[idx].memo = value.trim();
+  localStorage.setItem('oilsense_records', JSON.stringify(recs));
+  showToast('✅ メモを保存しました');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 
 function setBaseline(id, posKey) {
   const baselines = getBaselines();
@@ -713,11 +837,17 @@ function refreshHistory() {
       if (reasons.length) warnHtml = `<div class="warn-tag">⚠️ 交換タイミング超過（${reasons.join('・')}）</div>`;
     }
 
-    const tags = [`${pos.icon} ${pos.label}`, r.justChanged ? '🆕 交換直後' : null].filter(Boolean);
+    const tags = [
+      `${pos.icon} ${pos.label}`,
+      r.justChanged ? '🆕 交換直後' : null,
+      r.noiseLevel != null ? `🔊 ${r.noiseLevel.toFixed(4)}` : null
+    ].filter(Boolean);
 
     const actionHtml = historyEditMode
       ? `<button class="edit-del-btn" onclick="deleteRecord('${r.id}')">🗑️ 削除</button>`
       : (!isBaseline ? `<button class="set-bl-btn" onclick="setBaseline('${r.id}','${r.phonePos}')">⭐ 基準値に設定</button>` : '');
+
+    const dlHtml = r.rawSamples ? `<button class="dl-btn" onclick="downloadRawData('${r.id}')">⬇️ 生データ</button>` : '';
 
     return `<div class="history-item">
       <div class="h-main">
@@ -730,9 +860,11 @@ function refreshHistory() {
         <div style="text-align:right;">
           <div class="h-rms">${r.rms.toFixed(4)} g</div>
           ${actionHtml}
+          ${dlHtml}
         </div>
       </div>
       <div class="h-tags">${tags.map(t => `<span class="h-tag">${t}</span>`).join('')}</div>
+      <textarea class="memo-input" placeholder="メモを追加..." onblur="saveMemo('${r.id}', this.value)">${escapeHtml(r.memo || '')}</textarea>
     </div>`;
   }).join('');
 }
@@ -756,8 +888,16 @@ function toggleChip(key) {
   renderChart();
 }
 
+function setChartMetric(mode) {
+  chartMetric = mode;
+  el('seg-metric-vibration').classList.toggle('active', mode === 'vibration');
+  el('seg-metric-noise').classList.toggle('active', mode === 'noise');
+  renderChart();
+}
+
 function renderChart() {
-  const all = getRecords();
+  const getY = r => chartMetric === 'vibration' ? r.rms : r.noiseLevel;
+  const all = getRecords().filter(r => getY(r) != null);
   const wrap = el('chart-wrap');
   if (!all.length) { el('chart-empty').style.display = 'block'; wrap.innerHTML = ''; return; }
   el('chart-empty').style.display = 'none';
@@ -768,7 +908,7 @@ function renderChart() {
 
   const xVal = r => chartXMode === 'odo' ? r.odometer : new Date(r.date).getTime();
   const xs = visible.map(xVal);
-  const ys = visible.map(r => r.rms);
+  const ys = visible.map(getY);
   let xMin = xs.length ? Math.min(...xs) : 0, xMax = xs.length ? Math.max(...xs) : 1;
   let yMax = ys.length ? Math.max(...ys) * 1.15 : 1;
   if (xMin === xMax) { xMin -= 1; xMax += 1; }
@@ -792,10 +932,10 @@ function renderChart() {
     if (!chartVisible[p.key]) return;
     const pts = all.filter(r => r.phonePos === p.key).sort((a,b) => xVal(a) - xVal(b));
     if (!pts.length) return;
-    const poly = pts.map(r => `${sx(xVal(r))},${sy(r.rms)}`).join(' ');
+    const poly = pts.map(r => `${sx(xVal(r))},${sy(getY(r))}`).join(' ');
     svg += `<polyline points="${poly}" fill="none" stroke="${p.hex}" stroke-width="1.5" opacity="0.7"/>`;
     pts.forEach(r => {
-      const cx = sx(xVal(r)), cy = sy(r.rms);
+      const cx = sx(xVal(r)), cy = sy(getY(r));
       svg += r.justChanged
         ? `<circle cx="${cx}" cy="${cy}" r="6" fill="${p.hex}" stroke="#fff" stroke-width="2"/>`
         : `<circle cx="${cx}" cy="${cy}" r="3.5" fill="${p.hex}"/>`;
