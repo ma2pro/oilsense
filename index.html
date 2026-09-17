@@ -84,6 +84,10 @@
     .text-input:focus { border-color: var(--accent); }
     .input-unit { font-size: 12px; color: var(--text2); padding-bottom: 11px; white-space: nowrap; }
     .field-hint { font-size: 10px; color: var(--text2); margin-top: 5px; }
+    .select-input { appearance: none; -moz-appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--text2) 50%), linear-gradient(135deg, var(--text2) 50%, transparent 50%); background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 30px; }
+    .oil-sum { font-size: 13px; color: var(--text); font-weight: 600; }
+    .oil-sum .unset { color: var(--text2); font-weight: 400; }
+    .oil-sum .sub { display: block; font-size: 11px; color: var(--text2); font-weight: 400; margin-top: 3px; }
 
     .meter-val { font-size: 30px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1; text-align: center; }
     .meter-unit { font-size: 11px; color: var(--text2); text-align: center; margin-top: 4px; }
@@ -228,6 +232,61 @@
     </div>
   </div>
 
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span>🛢️ オイル仕様</span>
+      <button class="small-btn" id="btn-oil-toggle" onclick="toggleOilEdit()">変更</button>
+    </div>
+    <div id="oil-summary"></div>
+    <div id="oil-edit" style="display:none;margin-top:12px;">
+      <div class="settings-row">
+        <div class="input-group">
+          <div class="input-label">粘度</div>
+          <input type="text" class="text-input" id="oil-viscosity" list="dl-viscosity" placeholder="0W-30" oninput="autoSaveOil()">
+        </div>
+        <div class="input-group">
+          <div class="input-label">ベース油</div>
+          <select class="text-input select-input" id="oil-base" onchange="autoSaveOil()">
+            <option value="">未選択</option>
+            <option>全合成油</option>
+            <option>部分合成油</option>
+            <option>鉱物油</option>
+            <option>不明</option>
+          </select>
+        </div>
+      </div>
+      <div class="input-group" style="margin-top:10px;">
+        <div class="input-label">銘柄</div>
+        <input type="text" class="text-input" id="oil-brand" list="dl-brand" placeholder="シェル ヒリックス ウルトラ" oninput="autoSaveOil()">
+      </div>
+      <div class="input-group" style="margin-top:10px;">
+        <div class="input-label">規格</div>
+        <input type="text" class="text-input" id="oil-grade" list="dl-grade" placeholder="BMW LL-04" oninput="autoSaveOil()">
+      </div>
+      <div class="field-hint" style="margin-top:8px;">候補から選択、または直接入力できます。オイル交換時に更新してください。</div>
+    </div>
+  </div>
+
+  <datalist id="dl-viscosity">
+    <option>0W-8</option><option>0W-16</option><option>0W-20</option><option>0W-30</option><option>0W-40</option>
+    <option>5W-20</option><option>5W-30</option><option>5W-40</option><option>5W-50</option>
+    <option>10W-30</option><option>10W-40</option><option>10W-50</option><option>15W-40</option><option>20W-50</option>
+  </datalist>
+  <datalist id="dl-brand">
+    <option>モービル1</option><option>カストロール EDGE</option><option>シェル ヒリックス ウルトラ</option>
+    <option>ワコーズ</option><option>MOTUL</option><option>TOTAL</option><option>LIQUI MOLY</option>
+    <option>elf</option><option>SUNOCO</option><option>TAKUMI</option><option>ペンズオイル</option>
+    <option>Red Line</option><option>NUTEC</option><option>オメガ</option><option>BMW純正</option>
+    <option>トヨタ純正</option><option>日産純正</option><option>ホンダ純正</option>
+  </datalist>
+  <datalist id="dl-grade">
+    <option>API SP</option><option>API SN PLUS</option><option>API SN</option><option>API CF</option><option>API CK-4</option>
+    <option>ACEA A3/B4</option><option>ACEA A5/B5</option><option>ACEA C2</option><option>ACEA C3</option><option>ACEA C5</option>
+    <option>ILSAC GF-6A</option><option>ILSAC GF-6B</option><option>ILSAC GF-5</option>
+    <option>BMW LL-01</option><option>BMW LL-04</option><option>VW 504.00/507.00</option>
+    <option>MB 229.51</option><option>MB 229.52</option><option>Porsche C30</option>
+  </datalist>
+
   <div class="note"><strong>📋 測定条件：</strong>エンジン暖機後（水温計安定後）、エアコンOFF、平坦な場所でアイドリング中に計測してください。</div>
 
   <div class="card">
@@ -269,7 +328,8 @@
         <div class="stat-box"><div class="stat-lbl">基準値比</div><div class="stat-val" id="res-deg">—</div></div>
         <div class="stat-box"><div class="stat-lbl">ノイズ</div><div class="stat-val" id="res-noise">—</div></div>
       </div>
-      <div class="field-hint" id="res-hint" style="margin-top:10px;"></div>
+      <div class="field-hint" id="res-spec" style="margin-top:10px;"></div>
+      <div class="field-hint" id="res-hint" style="margin-top:6px;"></div>
     </div>
   </div>
 
@@ -402,6 +462,7 @@ let hpLast      = {x:0,y:0,z:0};
 let hpFilt      = {x:0,y:0,z:0};
 let toastTimer  = null;
 let carTimer    = null;
+let oilTimer    = null;
 let historyEditMode = false;
 let chartXMode  = 'odo';
 let chartMetric = 'vibration';
@@ -411,15 +472,30 @@ let audioCtx     = null;
 let analyserNode = null;
 let noiseInterval = null;
 let noiseSamples  = [];
+let spectrumAnalyser = null;
+let noiseSpecAccum   = null;
+let noiseSpecCount   = 0;
+let audioSampleRate  = null;
+let measureStartTs   = 0;
 const HP_ALPHA  = 0.85;
 const DURATION  = 30;
 const NUM_BARS  = 14;
 const RAW_KEEP_COUNT = 10;
 
+const APP_VERSION    = 'v2';
+const MIC_PROCESSING = 'processed';
+const VIB_NFFT       = 256;
+const NOISE_FFT_SIZE = 4096;
+const NOISE_BANDS    = 32;
+const NOISE_F_MIN    = 20;
+const NOISE_F_MAX    = 20000;
+const RPM_SEARCH_HZ  = [8, 20];
+
 document.addEventListener('DOMContentLoaded', () => {
   buildWaveform();
   initLiveMeter();
   loadCarSettings();
+  loadOilSettings();
   updateOdoHint();
   refreshHistory();
 });
@@ -506,6 +582,114 @@ function trimmedRms(arr, trimPct = 0.10) {
 }
 function resetHP() { hpLast = {x:0,y:0,z:0}; hpFilt = {x:0,y:0,z:0}; }
 
+function fft(re, im) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) {
+      let t = re[i]; re[i] = re[j]; re[j] = t;
+      t = im[i]; im[i] = im[j]; im[j] = t;
+    }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = -2 * Math.PI / len;
+    const wr = Math.cos(ang), wi = Math.sin(ang);
+    const half = len >> 1;
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0;
+      for (let j = 0; j < half; j++) {
+        const ur = re[i+j], ui = im[i+j];
+        const vr = re[i+j+half] * cr - im[i+j+half] * ci;
+        const vi = re[i+j+half] * ci + im[i+j+half] * cr;
+        re[i+j] = ur + vr; im[i+j] = ui + vi;
+        re[i+j+half] = ur - vr; im[i+j+half] = ui - vi;
+        const ncr = cr * wr - ci * wi;
+        ci = cr * wi + ci * wr; cr = ncr;
+      }
+    }
+  }
+}
+
+// Welch法: Hann窓・50%オーバーラップで periodogram を平均
+function welchPsd(arr, nfft) {
+  if (arr.length < nfft) return null;
+  const half = nfft >> 1;
+  const win = new Float64Array(nfft);
+  let winPow = 0;
+  for (let i = 0; i < nfft; i++) {
+    win[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (nfft - 1)));
+    winPow += win[i] * win[i];
+  }
+  const psd = new Float64Array(half);
+  let segs = 0;
+  for (let s = 0; s + nfft <= arr.length; s += half) {
+    const re = new Float64Array(nfft), im = new Float64Array(nfft);
+    let mean = 0;
+    for (let i = 0; i < nfft; i++) mean += arr[s+i];
+    mean /= nfft;
+    for (let i = 0; i < nfft; i++) re[i] = (arr[s+i] - mean) * win[i];
+    fft(re, im);
+    for (let k = 0; k < half; k++) psd[k] += re[k]*re[k] + im[k]*im[k];
+    segs++;
+  }
+  if (!segs) return null;
+  for (let k = 0; k < half; k++) psd[k] /= segs * winPow;
+  return psd;
+}
+
+function buildVibSpectrum(arr, fs) {
+  const psd = welchPsd(arr, VIB_NFFT);
+  if (!psd || !fs) return null;
+  const binHz = fs / VIB_NFFT;
+  const db = [];
+  for (let k = 0; k < psd.length; k++) {
+    db.push(psd[k] > 0 ? +(10 * Math.log10(psd[k])).toFixed(1) : null);
+  }
+  let peakHz = null, peakVal = -Infinity;
+  for (let k = 1; k < psd.length; k++) {
+    const f = k * binHz;
+    if (f < RPM_SEARCH_HZ[0] || f > RPM_SEARCH_HZ[1]) continue;
+    if (psd[k] > peakVal) { peakVal = psd[k]; peakHz = f; }
+  }
+  return { nfft: VIB_NFFT, binHz: +binHz.toFixed(4), db, peakHz: peakHz != null ? +peakHz.toFixed(2) : null };
+}
+
+function buildNoiseSpectrum() {
+  if (!noiseSpecAccum || !noiseSpecCount || !audioSampleRate) return null;
+  const nBins = noiseSpecAccum.length;
+  const binHz = audioSampleRate / NOISE_FFT_SIZE;
+  const ratio = Math.pow(NOISE_F_MAX / NOISE_F_MIN, 1 / NOISE_BANDS);
+  const db = [];
+  for (let b = 0; b < NOISE_BANDS; b++) {
+    const lo = NOISE_F_MIN * Math.pow(ratio, b);
+    const hi = lo * ratio;
+    const i0 = Math.max(1, Math.ceil(lo / binHz));
+    const i1 = Math.min(nBins - 1, Math.floor(hi / binHz));
+    let sum = 0, n = 0;
+    for (let i = i0; i <= i1; i++) { sum += noiseSpecAccum[i] / noiseSpecCount; n++; }
+    db.push(n && sum > 0 ? +(10 * Math.log10(sum / n)).toFixed(1) : null);
+  }
+  return { sampleRate: audioSampleRate, fftSize: NOISE_FFT_SIZE, fMin: NOISE_F_MIN, fMax: NOISE_F_MAX, bands: NOISE_BANDS, db };
+}
+
+function collectDeviceMeta() {
+  const ua = navigator.userAgent;
+  let os = 'unknown';
+  if (/iPhone|iPad|iPod/.test(ua))    os = 'iOS';
+  else if (/Android/.test(ua))        os = 'Android';
+  else if (/Windows/.test(ua))        os = 'Windows';
+  else if (/Mac OS X/.test(ua))       os = 'macOS';
+  const m = ua.match(/OS (\d+(?:[_.]\d+)*) like Mac OS X/) || ua.match(/Android (\d+(?:\.\d+)*)/);
+  return {
+    os,
+    osVersion: m ? m[1].replace(/_/g, '.') : null,
+    screen: `${screen.width}x${screen.height}@${window.devicePixelRatio || 1}`,
+    userAgent: ua
+  };
+}
+
 async function ensureMicPermission() {
   try {
     micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -518,17 +702,37 @@ async function ensureMicPermission() {
 
 function startNoiseCapture() {
   noiseSamples = [];
+  noiseSpecAccum = null; noiseSpecCount = 0; audioSampleRate = null;
   if (!micStream) return;
   try {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioSampleRate = audioCtx.sampleRate;
     const source = audioCtx.createMediaStreamSource(micStream);
+
+    // 既存RMS経路。fftSize=1024 は過去データとの互換のため変更しないこと
     analyserNode = audioCtx.createAnalyser();
     analyserNode.fftSize = 1024;
     source.connect(analyserNode);
-    const buf = new Float32Array(analyserNode.fftSize);
+
+    spectrumAnalyser = audioCtx.createAnalyser();
+    spectrumAnalyser.fftSize = NOISE_FFT_SIZE;
+    spectrumAnalyser.smoothingTimeConstant = 0;
+    source.connect(spectrumAnalyser);
+
+    const buf     = new Float32Array(analyserNode.fftSize);
+    const freqBuf = new Float32Array(spectrumAnalyser.frequencyBinCount);
+    noiseSpecAccum = new Float64Array(spectrumAnalyser.frequencyBinCount);
+
     noiseInterval = setInterval(() => {
       analyserNode.getFloatTimeDomainData(buf);
       noiseSamples.push(rms(Array.from(buf)));
+
+      spectrumAnalyser.getFloatFrequencyData(freqBuf);
+      for (let i = 0; i < freqBuf.length; i++) {
+        const v = freqBuf[i];
+        if (isFinite(v)) noiseSpecAccum[i] += Math.pow(10, v / 10);
+      }
+      noiseSpecCount++;
     }, 100);
   } catch (e) { /* noise capture unavailable on this device */ }
 }
@@ -538,6 +742,7 @@ function stopNoiseCapture() {
   if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
   if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
   analyserNode = null;
+  spectrumAnalyser = null;
 }
 
 function radioVal(name) { const c = document.querySelector(`input[name="${name}"]:checked`); return c ? c.value : null; }
@@ -574,6 +779,7 @@ async function startRecording() {
   if (!await ensurePermission()) return;
   await ensureMicPermission();
   measuring = true; samples = []; resetHP();
+  measureStartTs = Date.now();
   startNoiseCapture();
 
   el('btn-rec-start').style.display     = 'none';
@@ -613,6 +819,13 @@ function finishRecording() {
   const noiseLevel = noiseSamples.length ? trimmedRms(noiseSamples) : null;
   const now = new Date();
   const pos = radioVal('rec-pos');
+
+  const elapsedSec = (Date.now() - measureStartTs) / 1000;
+  const fs = elapsedSec > 0 ? samples.length / elapsedSec : null;
+  const vibSpectrum = buildVibSpectrum(samples, fs);
+  const noiseSpectrum = buildNoiseSpectrum();
+  const peakHz = vibSpectrum ? vibSpectrum.peakHz : null;
+
   const rec = {
     id: genId(),
     date: now.toISOString(),
@@ -623,6 +836,17 @@ function finishRecording() {
     samples: samples.length,
     noiseLevel: noiseLevel,
     memo: el('rec-memo').value.trim(),
+    oil: getOil(),
+    appVersion: APP_VERSION,
+    micProcessing: MIC_PROCESSING,
+    durationSec: +elapsedSec.toFixed(2),
+    sampleRateHz: fs != null ? +fs.toFixed(2) : null,
+    noiseSampleRateHz: noiseSamples.length ? +(noiseSamples.length / elapsedSec).toFixed(2) : null,
+    device: collectDeviceMeta(),
+    vibSpectrum: vibSpectrum,
+    noiseSpectrum: noiseSpectrum,
+    vibPeakHz: peakHz,
+    estimatedRpm: peakHz != null ? Math.round(peakHz * 60) : null,
     rawSamples: samples.slice(),
     rawNoiseSamples: noiseSamples.slice()
   };
@@ -643,6 +867,12 @@ function finishRecording() {
   el('res-rms').textContent = r.toFixed(5) + ' g';
   el('res-odo').textContent = rec.odometer.toLocaleString() + ' km';
   el('res-noise').textContent = noiseLevel != null ? noiseLevel.toFixed(5) : '未計測';
+
+  const specParts = [];
+  if (rec.sampleRateHz) specParts.push(`サンプルレート ${rec.sampleRateHz} Hz`);
+  if (peakHz != null)   specParts.push(`振動ピーク ${peakHz} Hz（≒${rec.estimatedRpm} rpm）`);
+  specParts.push(noiseSpectrum ? 'ノイズスペクトル 32バンド記録' : 'ノイズスペクトル 未取得');
+  el('res-spec').textContent = specParts.join(' ／ ');
 
   const baselines = getBaselines();
   const blId = baselines[pos];
@@ -706,6 +936,50 @@ function genId() { return 'r_' + Date.now().toString(36) + Math.random().toStrin
 function getCar()       { try { return JSON.parse(localStorage.getItem('oilsense_car')       || '{}'); } catch { return {}; } }
 function getRecords()   { try { return JSON.parse(localStorage.getItem('oilsense_records')   || '[]'); } catch { return []; } }
 function getBaselines() { try { return JSON.parse(localStorage.getItem('oilsense_baselines') || '{}'); } catch { return {}; } }
+function getOil()       { try { return JSON.parse(localStorage.getItem('oilsense_oil')       || '{}'); } catch { return {}; } }
+
+function oilLabel(oil) {
+  if (!oil) return null;
+  const head = [oil.viscosity, oil.brand].filter(Boolean).join(' · ');
+  const sub  = [oil.grade, oil.base].filter(Boolean).join(' · ');
+  return head || sub ? { head: head || '（粘度・銘柄未入力）', sub } : null;
+}
+
+function renderOilSummary() {
+  const lab = oilLabel(getOil());
+  el('oil-summary').innerHTML = lab
+    ? `<div class="oil-sum">${escapeHtml(lab.head)}${lab.sub ? `<span class="sub">${escapeHtml(lab.sub)}</span>` : ''}</div>`
+    : `<div class="oil-sum"><span class="unset">未設定 — 「変更」から入力してください</span></div>`;
+}
+
+function loadOilSettings() {
+  const oil = getOil();
+  if (oil.viscosity) el('oil-viscosity').value = oil.viscosity;
+  if (oil.brand)     el('oil-brand').value     = oil.brand;
+  if (oil.grade)     el('oil-grade').value     = oil.grade;
+  if (oil.base)      el('oil-base').value      = oil.base;
+  renderOilSummary();
+}
+
+function toggleOilEdit() {
+  const open = el('oil-edit').style.display !== 'none';
+  el('oil-edit').style.display = open ? 'none' : 'block';
+  el('btn-oil-toggle').textContent = open ? '変更' : '閉じる';
+}
+
+function autoSaveOil() {
+  clearTimeout(oilTimer);
+  oilTimer = setTimeout(() => {
+    localStorage.setItem('oilsense_oil', JSON.stringify({
+      viscosity: el('oil-viscosity').value.trim(),
+      brand:     el('oil-brand').value.trim(),
+      grade:     el('oil-grade').value.trim(),
+      base:      el('oil-base').value
+    }));
+    renderOilSummary();
+    showToast('✅ オイル仕様を保存しました');
+  }, 800);
+}
 
 function pruneRawData(recs) {
   const sorted = [...recs].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -727,6 +1001,17 @@ function downloadRawData(id) {
     id: rec.id, date: rec.date, odometer: rec.odometer, phonePos: rec.phonePos,
     justChanged: rec.justChanged, rms: rec.rms, noiseLevel: rec.noiseLevel,
     memo: rec.memo || '',
+    oil: rec.oil || null,
+    appVersion: rec.appVersion || 'v1',
+    micProcessing: rec.micProcessing || 'processed',
+    durationSec: rec.durationSec ?? null,
+    sampleRateHz: rec.sampleRateHz ?? null,
+    noiseSampleRateHz: rec.noiseSampleRateHz ?? null,
+    device: rec.device || null,
+    vibSpectrum: rec.vibSpectrum || null,
+    noiseSpectrum: rec.noiseSpectrum || null,
+    vibPeakHz: rec.vibPeakHz ?? null,
+    estimatedRpm: rec.estimatedRpm ?? null,
     rawVibrationSamples: rec.rawSamples,
     rawNoiseSamples: rec.rawNoiseSamples || []
   };
@@ -837,10 +1122,13 @@ function refreshHistory() {
       if (reasons.length) warnHtml = `<div class="warn-tag">⚠️ 交換タイミング超過（${reasons.join('・')}）</div>`;
     }
 
+    const oilLab = oilLabel(r.oil);
     const tags = [
       `${pos.icon} ${pos.label}`,
       r.justChanged ? '🆕 交換直後' : null,
-      r.noiseLevel != null ? `🔊 ${r.noiseLevel.toFixed(4)}` : null
+      r.noiseLevel != null ? `🔊 ${r.noiseLevel.toFixed(4)}` : null,
+      oilLab ? `🛢️ ${oilLab.head}` : null,
+      r.estimatedRpm ? `⚙️ ${r.estimatedRpm} rpm` : null
     ].filter(Boolean);
 
     const actionHtml = historyEditMode
