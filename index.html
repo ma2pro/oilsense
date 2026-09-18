@@ -175,6 +175,19 @@
     .chart-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 8px; margin-bottom: 12px; }
     .chart-legend-note { font-size: 10px; color: var(--text2); text-align: center; margin-bottom: 8px; }
 
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.72); z-index: 900; align-items: center; justify-content: center; padding: 18px; }
+    .modal-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 18px 16px 14px; max-width: 420px; width: 100%; max-height: 88vh; overflow-y: auto; }
+    .modal-title { font-size: 16px; font-weight: 800; color: var(--accent); margin-bottom: 12px; }
+    .modal-body { font-size: 12.5px; line-height: 1.7; color: var(--text2); margin-bottom: 16px; }
+    .modal-body p { margin-bottom: 12px; }
+    .consent-sec { background: var(--bg3); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+    .consent-head { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+    .consent-head.ok { color: var(--green); }
+    .consent-head.ng { color: var(--red); }
+    .consent-sec ul { margin: 0; padding-left: 18px; }
+    .consent-sec li { margin-bottom: 3px; }
+    .consent-note { font-size: 11px; margin-bottom: 0 !important; }
+
     .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--green); color: #fff; font-size: 13px; font-weight: 700; padding: 10px 24px; border-radius: 24px; transition: transform 0.3s ease; z-index: 999; pointer-events: none; }
     .toast.show { transform: translateX(-50%) translateY(0); }
     .spacer { height: 24px; }
@@ -228,7 +241,8 @@
 
     <div class="cond-group">
       <div class="cond-label">メモ <span class="badge-opt">任意</span></div>
-      <textarea class="text-input memo-textarea" id="rec-memo" rows="2" placeholder="例: オイル名はシェル ヒリックスウルトラ 0W-30。油温メーター読み100℃時のデータ。"></textarea>
+      <textarea class="text-input memo-textarea" id="rec-memo" rows="2" placeholder="例: 1000km走行時の経過観察。油温メーター読み100℃、外気温22℃。"></textarea>
+      <div class="field-hint">メモはサーバーに送信されます。氏名・連絡先・車両ナンバーなどは記入しないでください。</div>
     </div>
   </div>
 
@@ -312,10 +326,10 @@
   </div>
 
   <div class="card">
-    <div class="card-title">🎤 ノイズレベル測定 <span class="badge-opt">参考値</span></div>
+    <div class="card-title">🎤 ノイズレベル測定</div>
     <div class="noise-placeholder">
       <div class="noise-icon">🔊</div>
-      <div class="noise-text">計測開始と同時にマイクで周囲音レベルも記録します（参考値）。オイル劣化の判定には使用していません。マイクの許可が必要です。</div>
+      <div class="noise-text">計測開始と同時に、マイクで周囲音レベルと周波数スペクトルを記録します。マイクの許可が必要です。</div>
     </div>
   </div>
 
@@ -365,7 +379,7 @@
 
   <div class="segmented">
     <div class="seg-btn active" id="seg-metric-vibration" onclick="setChartMetric('vibration')">📈 振動</div>
-    <div class="seg-btn" id="seg-metric-noise" onclick="setChartMetric('noise')">🔊 ノイズ（参考）</div>
+    <div class="seg-btn" id="seg-metric-noise" onclick="setChartMetric('noise')">🔊 ノイズ</div>
   </div>
 
   <div class="segmented">
@@ -394,6 +408,14 @@
 <div id="screen-settings" class="screen">
 
   <div class="note">車両情報を登録しておくと履歴が見やすくなります。変更は自動保存されます。</div>
+
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span>☁️ データ送信状況</span>
+      <button class="small-btn" onclick="syncPending(false)">今すぐ送信</button>
+    </div>
+    <div id="sync-status" style="font-size:12.5px;"></div>
+  </div>
 
   <div class="card">
     <div class="card-title">車両情報</div>
@@ -436,12 +458,42 @@
 
   <div class="future-card">
     <div class="card-title">🔮 将来実装予定</div>
-    <div class="f-item"><div class="f-icon">📊</div><div>同車種・同設置位置のユーザーデータと比較し、自分のオイル劣化が平均的にどの程度かを把握できます</div></div>
-    <div class="f-item"><div class="f-icon">🎤</div><div>ノイズレベルは現在参考値として記録のみ。将来的には振動データと合わせた複合判定への活用を予定しています</div></div>
+    <div class="f-item"><div class="f-icon">📤</div><div>計測データをサーバーへ送信し、解析用のデータベースを構築します。送信前に同意確認を行います</div></div>
+    <div class="f-item"><div class="f-icon">📊</div><div>同車種・同設置位置・同オイル仕様のデータと比較し、自分のオイル劣化が平均的にどの程度かを把握できます</div></div>
+    <div class="f-item"><div class="f-icon">🔊</div><div>記録済みのノイズ周波数スペクトルを解析し、振動と合わせた判定ロジックを開発中です</div></div>
     <div class="f-item"><div class="f-icon">🔒</div><div>データは匿名化して収集し、個人を特定する情報は一切送信しません</div></div>
   </div>
 
   <div class="spacer"></div>
+</div>
+
+<div class="modal-overlay" id="consent-modal">
+  <div class="modal-box">
+    <div class="modal-title">📊 データ提供のお願い</div>
+    <div class="modal-body">
+      <p>本アプリは計測データを収集・分析することで、判定精度の向上と車種別データベースの構築を行っています。</p>
+      <div class="consent-sec">
+        <div class="consent-head ok">送信される情報</div>
+        <ul>
+          <li>振動／ノイズの測定値とスペクトル</li>
+          <li>車種・年式・オイル仕様</li>
+          <li>走行距離・計測条件・メモ</li>
+          <li>端末のOS種別と画面サイズ</li>
+          <li>ランダムな匿名ID（個人とは結び付きません）</li>
+        </ul>
+      </div>
+      <div class="consent-sec">
+        <div class="consent-head ng">送信されない情報</div>
+        <ul>
+          <li>氏名・連絡先・位置情報</li>
+          <li>車両ナンバー</li>
+        </ul>
+      </div>
+      <p class="consent-note">同意後も、設定タブからいつでも送信状況を確認できます。</p>
+    </div>
+    <button class="btn btn-primary" onclick="acceptConsent()">同意して計測を開始</button>
+    <button class="btn btn-outline" style="margin-bottom:0;" onclick="declineConsent()">キャンセル</button>
+  </div>
 </div>
 
 <div class="toast" id="toast">✅ 保存しました</div>
@@ -498,6 +550,10 @@ const NOISE_F_MIN    = 20;
 const NOISE_F_MAX    = 20000;
 const RPM_SEARCH_HZ  = [8, 20];
 
+const SUPABASE_URL     = 'https://plignoxmvvrvktygqowu.supabase.co';
+const SUPABASE_KEY     = 'sb_publishable_qTsNo2hG56DmfLw_LEZSNQ_uLNNfyNA';
+const CONSENT_VERSION  = '1';
+
 document.addEventListener('DOMContentLoaded', () => {
   buildWaveform();
   initLiveMeter();
@@ -505,15 +561,18 @@ document.addEventListener('DOMContentLoaded', () => {
   loadOilSettings();
   updateOdoHint();
   refreshHistory();
+  renderSyncStatus();
+  syncPending();
 });
 
 function switchTab(name) {
   const names = ['record','history','chart','settings'];
   document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i] === name));
   document.querySelectorAll('.screen').forEach((s,i) => s.classList.toggle('active', names[i] === name));
-  if (name === 'history') refreshHistory();
-  if (name === 'chart')   renderChart();
-  if (name === 'record')  updateOdoHint();
+  if (name === 'history')  refreshHistory();
+  if (name === 'chart')    renderChart();
+  if (name === 'record')   updateOdoHint();
+  if (name === 'settings') renderSyncStatus();
 }
 
 function buildWaveform() {
@@ -861,6 +920,7 @@ function stopCountdown() { clearInterval(timerInt); timerInt = null; }
 
 async function startRecording() {
   if (!validateRecord()) return;
+  if (!getConsent()) { showConsentModal(); return; }
   if (!await ensurePermission()) return;
   await ensureMicPermission();
   measuring = true; samples = []; resetHP();
@@ -924,6 +984,7 @@ function finishRecording() {
     noiseLevel: noiseLevel,
     memo: el('rec-memo').value.trim(),
     oil: getOil(),
+    car: getCar(),
     appVersion: APP_VERSION,
     micProcessing: MIC_PROCESSING,
     durationSec: +elapsedSec.toFixed(2),
@@ -990,6 +1051,7 @@ function finishRecording() {
 
   el('rec-justchanged').checked = false;
   updateOdoHint();
+  syncPending();
 }
 
 function cancelMeasurement() {
@@ -1035,6 +1097,139 @@ function getCar()       { try { return JSON.parse(localStorage.getItem('oilsense
 function getRecords()   { try { return JSON.parse(localStorage.getItem('oilsense_records')   || '[]'); } catch { return []; } }
 function getBaselines() { try { return JSON.parse(localStorage.getItem('oilsense_baselines') || '{}'); } catch { return {}; } }
 function getOil()       { try { return JSON.parse(localStorage.getItem('oilsense_oil')       || '{}'); } catch { return {}; } }
+
+function getDeviceId() {
+  let id = localStorage.getItem('oilsense_device_id');
+  if (!id) {
+    id = (crypto && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : 'd_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    localStorage.setItem('oilsense_device_id', id);
+  }
+  return id;
+}
+function getConsent() { return localStorage.getItem('oilsense_consent'); }
+
+function toRow(rec) {
+  const car = rec.car || getCar();
+  const oil = rec.oil || {};
+  const d   = rec.device || {};
+  const row = {
+    id: rec.id,
+    device_id: getDeviceId(),
+    measured_at: rec.date,
+    app_version: rec.appVersion || 'v1',
+    mic_processing: rec.micProcessing || null,
+    consent_version: getConsent(),
+    os: d.os || null,
+    os_version: d.osVersion || null,
+    screen: d.screen || null,
+    user_agent: d.userAgent || null,
+    car_maker: car.maker || null,
+    car_model: car.model || null,
+    car_year: car.year ? +car.year : null,
+    oil_viscosity: oil.viscosity || null,
+    oil_brand: oil.brand || null,
+    oil_grade: oil.grade || null,
+    oil_base: oil.base || null,
+    odometer: rec.odometer,
+    phone_pos: rec.phonePos,
+    just_changed: !!rec.justChanged,
+    memo: rec.memo || null,
+    rms: rec.rms,
+    noise_level: rec.noiseLevel ?? null,
+    noise_level_unproc: rec.noiseLevelUnproc ?? null,
+    sample_count: rec.samples ?? null,
+    duration_sec: rec.durationSec ?? null,
+    sample_rate_hz: rec.sampleRateHz ?? null,
+    noise_sample_rate_hz: rec.noiseSampleRateHz ?? null,
+    vib_peak_hz: rec.vibPeakHz ?? null,
+    estimated_rpm: rec.estimatedRpm ?? null,
+    vib_spectrum: rec.vibSpectrum || null,
+    noise_spectrum: rec.noiseSpectrum || null,
+    noise_spectrum_unproc: rec.noiseSpectrumUnproc || null,
+    mic_diag: rec.micDiag || null
+  };
+  // 生データは交換直後の記録のみ送る（容量対策）
+  if (rec.justChanged) {
+    const r5 = a => a ? a.map(v => +v.toFixed(5)) : null;
+    const r7 = a => a ? a.map(v => +v.toFixed(7)) : null;
+    row.raw_samples              = r5(rec.rawSamples);
+    row.raw_noise_samples        = r7(rec.rawNoiseSamples);
+    row.raw_noise_samples_unproc = r7(rec.rawNoiseSamplesUnproc);
+  }
+  return row;
+}
+
+async function uploadRecord(rec) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/records`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify(toRow(rec))
+  });
+  // 409/23505 は同一IDが既に存在＝送信済み。再送時の冪等性をSELECT権限なしで確保する
+  if (res.status === 409) return true;
+  if (!res.ok) throw new Error(res.status + ' ' + await res.text());
+  return true;
+}
+
+function markUploaded(id) {
+  const recs = getRecords();
+  const i = recs.findIndex(r => r.id === id);
+  if (i === -1) return;
+  recs[i].uploadedAt = new Date().toISOString();
+  localStorage.setItem('oilsense_records', JSON.stringify(recs));
+}
+
+let syncing = false;
+async function syncPending(silent = true) {
+  if (syncing || !getConsent()) return 0;
+  const pending = getRecords().filter(r => !r.uploadedAt);
+  if (!pending.length) { if (!silent) showToast('✅ 未送信データはありません'); return 0; }
+  if (navigator.onLine === false) { if (!silent) showToast('⚠️ オフラインです'); return 0; }
+
+  syncing = true;
+  let ok = 0, failed = null;
+  for (const rec of pending) {
+    try { await uploadRecord(rec); markUploaded(rec.id); ok++; }
+    catch (e) { failed = e.message; break; }
+  }
+  syncing = false;
+
+  if (ok) refreshHistory();
+  if (!silent) {
+    if (failed) showToast(`⚠️ ${ok}件送信、残りは後で再試行します`);
+    else        showToast(`☁️ ${ok}件を送信しました`);
+  }
+  renderSyncStatus();
+  return ok;
+}
+
+function renderSyncStatus() {
+  const box = el('sync-status');
+  if (!box) return;
+  if (!getConsent()) { box.innerHTML = '<span style="color:var(--text2)">データ提供は未同意です</span>'; return; }
+  const recs = getRecords();
+  const done = recs.filter(r => r.uploadedAt).length;
+  const left = recs.length - done;
+  box.innerHTML = `<span>☁️ 送信済み <b>${done}</b> 件`
+    + (left ? ` ／ <span style="color:#ffa726">未送信 <b>${left}</b> 件</span>` : '')
+    + `</span>`;
+}
+
+function showConsentModal() { el('consent-modal').style.display = 'flex'; }
+function declineConsent()   { el('consent-modal').style.display = 'none'; }
+function acceptConsent() {
+  localStorage.setItem('oilsense_consent', CONSENT_VERSION);
+  el('consent-modal').style.display = 'none';
+  renderSyncStatus();
+  startRecording();
+}
 
 function oilLabel(oil) {
   if (!oil) return null;
@@ -1230,7 +1425,8 @@ function refreshHistory() {
       r.justChanged ? '🆕 交換直後' : null,
       r.noiseLevel != null ? `🔊 ${r.noiseLevel.toFixed(4)}` : null,
       oilLab ? `🛢️ ${oilLab.head}` : null,
-      r.estimatedRpm ? `⚙️ ${r.estimatedRpm} rpm` : null
+      r.estimatedRpm ? `⚙️ ${r.estimatedRpm} rpm` : null,
+      r.uploadedAt ? '☁️ 送信済' : null
     ].filter(Boolean);
 
     const actionHtml = historyEditMode
