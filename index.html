@@ -477,12 +477,19 @@ let noiseSpecAccum   = null;
 let noiseSpecCount   = 0;
 let audioSampleRate  = null;
 let measureStartTs   = 0;
+let micStreamUnproc  = null;
+let analyserUnproc   = null;
+let spectrumAnalyserUnproc = null;
+let noiseSamplesUnproc  = [];
+let noiseSpecAccumUnproc = null;
+let noiseSpecCountUnproc = 0;
+let micDiag = null;
 const HP_ALPHA  = 0.85;
 const DURATION  = 30;
 const NUM_BARS  = 14;
 const RAW_KEEP_COUNT = 10;
 
-const APP_VERSION    = 'v2';
+const APP_VERSION    = 'v3';
 const MIC_PROCESSING = 'processed';
 const VIB_NFFT       = 256;
 const NOISE_FFT_SIZE = 4096;
@@ -656,9 +663,9 @@ function buildVibSpectrum(arr, fs) {
   return { nfft: VIB_NFFT, binHz: +binHz.toFixed(4), db, peakHz: peakHz != null ? +peakHz.toFixed(2) : null };
 }
 
-function buildNoiseSpectrum() {
-  if (!noiseSpecAccum || !noiseSpecCount || !audioSampleRate) return null;
-  const nBins = noiseSpecAccum.length;
+function buildNoiseSpectrum(accum, count) {
+  if (!accum || !count || !audioSampleRate) return null;
+  const nBins = accum.length;
   const binHz = audioSampleRate / NOISE_FFT_SIZE;
   const ratio = Math.pow(NOISE_F_MAX / NOISE_F_MIN, 1 / NOISE_BANDS);
   const db = [];
@@ -668,7 +675,7 @@ function buildNoiseSpectrum() {
     const i0 = Math.max(1, Math.ceil(lo / binHz));
     const i1 = Math.min(nBins - 1, Math.floor(hi / binHz));
     let sum = 0, n = 0;
-    for (let i = i0; i <= i1; i++) { sum += noiseSpecAccum[i] / noiseSpecCount; n++; }
+    for (let i = i0; i <= i1; i++) { sum += accum[i] / count; n++; }
     db.push(n && sum > 0 ? +(10 * Math.log10(sum / n)).toFixed(1) : null);
   }
   return { sampleRate: audioSampleRate, fftSize: NOISE_FFT_SIZE, fMin: NOISE_F_MIN, fMax: NOISE_F_MAX, bands: NOISE_BANDS, db };
@@ -690,19 +697,64 @@ function collectDeviceMeta() {
   };
 }
 
+function micTrackSettings(stream) {
+  if (!stream) return null;
+  const t = stream.getAudioTracks()[0];
+  if (!t) return null;
+  const s = t.getSettings ? t.getSettings() : {};
+  return {
+    echoCancellation: s.echoCancellation ?? null,
+    noiseSuppression: s.noiseSuppression ?? null,
+    autoGainControl:  s.autoGainControl  ?? null,
+    sampleRate:       s.sampleRate       ?? null,
+    readyState:       t.readyState
+  };
+}
+function streamLive(stream) {
+  return !!stream && stream.getAudioTracks().some(t => t.readyState === 'live');
+}
+
+// 無加工を先に取得する。2本目の取得で1本目が停止する端末があるため、
+// 犠牲になるのを新規（無加工）側に寄せ、既存系列の加工ありを必ず残す。
 async function ensureMicPermission() {
+  micStreamUnproc = null; micStream = null; micDiag = null;
+
+  try {
+    micStreamUnproc = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+    });
+  } catch (e) { micStreamUnproc = null; }
+
   try {
     micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    return true;
-  } catch (e) {
-    micStream = null;
-    return false;
+  } catch (e) { micStream = null; }
+
+  // 加工ありが取れなかった場合は無加工を解放して単独で取り直す（既存系列を最優先）
+  if (!micStream && micStreamUnproc) {
+    micStreamUnproc.getTracks().forEach(t => t.stop());
+    micStreamUnproc = null;
+    try { micStream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch (e) { micStream = null; }
   }
+
+  // 2本目の取得で無加工側が止められていないか確認
+  if (micStreamUnproc && !streamLive(micStreamUnproc)) {
+    micStreamUnproc.getTracks().forEach(t => t.stop());
+    micStreamUnproc = null;
+  }
+
+  micDiag = {
+    dualStream: !!(micStream && micStreamUnproc),
+    processed:  micTrackSettings(micStream),
+    unprocessed: micTrackSettings(micStreamUnproc)
+  };
+  return !!micStream;
 }
 
 function startNoiseCapture() {
   noiseSamples = [];
   noiseSpecAccum = null; noiseSpecCount = 0; audioSampleRate = null;
+  noiseSamplesUnproc = []; noiseSpecAccumUnproc = null; noiseSpecCountUnproc = 0;
   if (!micStream) return;
   try {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -723,6 +775,25 @@ function startNoiseCapture() {
     const freqBuf = new Float32Array(spectrumAnalyser.frequencyBinCount);
     noiseSpecAccum = new Float64Array(spectrumAnalyser.frequencyBinCount);
 
+    let bufU = null, freqBufU = null;
+    if (micStreamUnproc) {
+      try {
+        const srcU = audioCtx.createMediaStreamSource(micStreamUnproc);
+        analyserUnproc = audioCtx.createAnalyser();
+        analyserUnproc.fftSize = 1024;
+        srcU.connect(analyserUnproc);
+
+        spectrumAnalyserUnproc = audioCtx.createAnalyser();
+        spectrumAnalyserUnproc.fftSize = NOISE_FFT_SIZE;
+        spectrumAnalyserUnproc.smoothingTimeConstant = 0;
+        srcU.connect(spectrumAnalyserUnproc);
+
+        bufU     = new Float32Array(analyserUnproc.fftSize);
+        freqBufU = new Float32Array(spectrumAnalyserUnproc.frequencyBinCount);
+        noiseSpecAccumUnproc = new Float64Array(spectrumAnalyserUnproc.frequencyBinCount);
+      } catch (e) { analyserUnproc = null; spectrumAnalyserUnproc = null; }
+    }
+
     noiseInterval = setInterval(() => {
       analyserNode.getFloatTimeDomainData(buf);
       noiseSamples.push(rms(Array.from(buf)));
@@ -733,6 +804,17 @@ function startNoiseCapture() {
         if (isFinite(v)) noiseSpecAccum[i] += Math.pow(10, v / 10);
       }
       noiseSpecCount++;
+
+      if (analyserUnproc) {
+        analyserUnproc.getFloatTimeDomainData(bufU);
+        noiseSamplesUnproc.push(rms(Array.from(bufU)));
+        spectrumAnalyserUnproc.getFloatFrequencyData(freqBufU);
+        for (let i = 0; i < freqBufU.length; i++) {
+          const v = freqBufU[i];
+          if (isFinite(v)) noiseSpecAccumUnproc[i] += Math.pow(10, v / 10);
+        }
+        noiseSpecCountUnproc++;
+      }
     }, 100);
   } catch (e) { /* noise capture unavailable on this device */ }
 }
@@ -741,8 +823,11 @@ function stopNoiseCapture() {
   if (noiseInterval) { clearInterval(noiseInterval); noiseInterval = null; }
   if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
   if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  if (micStreamUnproc) { micStreamUnproc.getTracks().forEach(t => t.stop()); micStreamUnproc = null; }
   analyserNode = null;
   spectrumAnalyser = null;
+  analyserUnproc = null;
+  spectrumAnalyserUnproc = null;
 }
 
 function radioVal(name) { const c = document.querySelector(`input[name="${name}"]:checked`); return c ? c.value : null; }
@@ -823,7 +908,9 @@ function finishRecording() {
   const elapsedSec = (Date.now() - measureStartTs) / 1000;
   const fs = elapsedSec > 0 ? samples.length / elapsedSec : null;
   const vibSpectrum = buildVibSpectrum(samples, fs);
-  const noiseSpectrum = buildNoiseSpectrum();
+  const noiseSpectrum = buildNoiseSpectrum(noiseSpecAccum, noiseSpecCount);
+  const noiseSpectrumUnproc = buildNoiseSpectrum(noiseSpecAccumUnproc, noiseSpecCountUnproc);
+  const noiseLevelUnproc = noiseSamplesUnproc.length ? trimmedRms(noiseSamplesUnproc) : null;
   const peakHz = vibSpectrum ? vibSpectrum.peakHz : null;
 
   const rec = {
@@ -845,10 +932,14 @@ function finishRecording() {
     device: collectDeviceMeta(),
     vibSpectrum: vibSpectrum,
     noiseSpectrum: noiseSpectrum,
+    noiseLevelUnproc: noiseLevelUnproc,
+    noiseSpectrumUnproc: noiseSpectrumUnproc,
+    micDiag: micDiag,
     vibPeakHz: peakHz,
     estimatedRpm: peakHz != null ? Math.round(peakHz * 60) : null,
     rawSamples: samples.slice(),
-    rawNoiseSamples: noiseSamples.slice()
+    rawNoiseSamples: noiseSamples.slice(),
+    rawNoiseSamplesUnproc: noiseSamplesUnproc.slice()
   };
 
   let recs = getRecords();
@@ -872,6 +963,13 @@ function finishRecording() {
   if (rec.sampleRateHz) specParts.push(`サンプルレート ${rec.sampleRateHz} Hz`);
   if (peakHz != null)   specParts.push(`振動ピーク ${peakHz} Hz（≒${rec.estimatedRpm} rpm）`);
   specParts.push(noiseSpectrum ? 'ノイズスペクトル 32バンド記録' : 'ノイズスペクトル 未取得');
+  if (noiseLevelUnproc != null) {
+    const s = micDiag && micDiag.unprocessed;
+    const applied = s && s.autoGainControl === false && s.noiseSuppression === false;
+    specParts.push(`🎙️ 無加工ノイズ ${noiseLevelUnproc.toFixed(5)}${applied ? '（AGC/NS解除を確認）' : '（※加工解除が効いていない可能性）'}`);
+  } else {
+    specParts.push('🎙️ 無加工ノイズ 取得不可（この端末は同時2ストリーム非対応）');
+  }
   el('res-spec').textContent = specParts.join(' ／ ');
 
   const baselines = getBaselines();
@@ -986,8 +1084,8 @@ function pruneRawData(recs) {
   const keepIds = new Set(sorted.slice(0, RAW_KEEP_COUNT).map(r => r.id));
   return recs.map(r => {
     if (keepIds.has(r.id)) return r;
-    if (r.rawSamples || r.rawNoiseSamples) {
-      const { rawSamples, rawNoiseSamples, ...rest } = r;
+    if (r.rawSamples || r.rawNoiseSamples || r.rawNoiseSamplesUnproc) {
+      const { rawSamples, rawNoiseSamples, rawNoiseSamplesUnproc, ...rest } = r;
       return rest;
     }
     return r;
@@ -1010,10 +1108,14 @@ function downloadRawData(id) {
     device: rec.device || null,
     vibSpectrum: rec.vibSpectrum || null,
     noiseSpectrum: rec.noiseSpectrum || null,
+    noiseLevelUnproc: rec.noiseLevelUnproc ?? null,
+    noiseSpectrumUnproc: rec.noiseSpectrumUnproc || null,
+    micDiag: rec.micDiag || null,
     vibPeakHz: rec.vibPeakHz ?? null,
     estimatedRpm: rec.estimatedRpm ?? null,
     rawVibrationSamples: rec.rawSamples,
-    rawNoiseSamples: rec.rawNoiseSamples || []
+    rawNoiseSamples: rec.rawNoiseSamples || [],
+    rawNoiseSamplesUnproc: rec.rawNoiseSamplesUnproc || []
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
