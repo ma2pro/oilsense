@@ -85,6 +85,12 @@
     .input-unit { font-size: 12px; color: var(--text2); padding-bottom: 11px; white-space: nowrap; }
     .field-hint { font-size: 10px; color: var(--text2); margin-top: 5px; }
     .select-input { appearance: none; -moz-appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--text2) 50%), linear-gradient(135deg, var(--text2) 50%, transparent 50%); background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 30px; }
+    .diag-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--rule, var(--border)); }
+    .diag-row b { font-variant-numeric: tabular-nums; color: var(--accent); }
+    .diag-verdict { margin-top: 10px; padding: 9px 11px; border-radius: 7px; font-size: 12px; line-height: 1.6; }
+    .diag-verdict.ok { background: rgba(102,187,106,.12); border: 1px solid rgba(102,187,106,.4); color: var(--green); }
+    .diag-verdict.ng { background: rgba(244,67,54,.10);  border: 1px solid rgba(244,67,54,.35);  color: #ff8a80; }
+
     .oil-sum { font-size: 13px; color: var(--text); font-weight: 600; }
     .oil-sum .unset { color: var(--text2); font-weight: 400; }
     .oil-sum .sub { display: block; font-size: 11px; color: var(--text2); font-weight: 400; margin-top: 3px; }
@@ -415,6 +421,16 @@
       <button class="small-btn" onclick="syncPending(false)">今すぐ送信</button>
     </div>
     <div id="sync-status" style="font-size:12.5px;"></div>
+    <div class="field-hint" style="margin-top:8px;">🔒 データは匿名化して送信しています。氏名・連絡先・位置情報・車両ナンバーは送信していません。</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span>🎤 マイク無加工取得の診断</span>
+      <button class="small-btn" onclick="runMicDiagnostic()">実行</button>
+    </div>
+    <div class="field-hint" style="margin-bottom:8px;">加工あり10秒 → 無加工10秒を順に測り、iOSが音声処理の解除に対応しているかを判定します（約22秒）。<b>エンジンをかけた状態で実行してください。</b>記録には残りません。</div>
+    <div id="mic-diag-result" style="font-size:12.5px;"></div>
   </div>
 
   <div class="card">
@@ -458,10 +474,9 @@
 
   <div class="future-card">
     <div class="card-title">🔮 将来実装予定</div>
-    <div class="f-item"><div class="f-icon">📤</div><div>計測データをサーバーへ送信し、解析用のデータベースを構築します。送信前に同意確認を行います</div></div>
     <div class="f-item"><div class="f-icon">📊</div><div>同車種・同設置位置・同オイル仕様のデータと比較し、自分のオイル劣化が平均的にどの程度かを把握できます</div></div>
-    <div class="f-item"><div class="f-icon">🔊</div><div>記録済みのノイズ周波数スペクトルを解析し、振動と合わせた判定ロジックを開発中です</div></div>
-    <div class="f-item"><div class="f-icon">🔒</div><div>データは匿名化して収集し、個人を特定する情報は一切送信しません</div></div>
+    <div class="f-item"><div class="f-icon">🔊</div><div>ノイズの周波数スペクトルを解析し、振動と合わせた判定ロジックを開発します。現在は記録のみで判定には使っていません</div></div>
+    <div class="f-item"><div class="f-icon">🎯</div><div>収集したデータをもとに判定しきい値を見直し、車種ごとに最適化します</div></div>
   </div>
 
   <div class="spacer"></div>
@@ -529,19 +544,13 @@ let noiseSpecAccum   = null;
 let noiseSpecCount   = 0;
 let audioSampleRate  = null;
 let measureStartTs   = 0;
-let micStreamUnproc  = null;
-let analyserUnproc   = null;
-let spectrumAnalyserUnproc = null;
-let noiseSamplesUnproc  = [];
-let noiseSpecAccumUnproc = null;
-let noiseSpecCountUnproc = 0;
 let micDiag = null;
 const HP_ALPHA  = 0.85;
 const DURATION  = 30;
 const NUM_BARS  = 14;
 const RAW_KEEP_COUNT = 10;
 
-const APP_VERSION    = 'v3';
+const APP_VERSION    = 'v4';
 const MIC_PROCESSING = 'processed';
 const VIB_NFFT       = 256;
 const NOISE_FFT_SIZE = 4096;
@@ -773,47 +782,90 @@ function streamLive(stream) {
   return !!stream && stream.getAudioTracks().some(t => t.readyState === 'live');
 }
 
-// 無加工を先に取得する。2本目の取得で1本目が停止する端末があるため、
-// 犠牲になるのを新規（無加工）側に寄せ、既存系列の加工ありを必ず残す。
+// iOSのオーディオセッションは端末に1つで、処理モードが全ストリームに一括適用される。
+// 加工あり／無加工を同時に持つことはできない（2本立ては実機で失敗、倍率1.000）。
+// 逐次比較は runMicDiagnostic() で行う。
 async function ensureMicPermission() {
-  micStreamUnproc = null; micStream = null; micDiag = null;
-
-  try {
-    micStreamUnproc = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
-    });
-  } catch (e) { micStreamUnproc = null; }
-
+  micStream = null; micDiag = null;
   try {
     micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch (e) { micStream = null; }
-
-  // 加工ありが取れなかった場合は無加工を解放して単独で取り直す（既存系列を最優先）
-  if (!micStream && micStreamUnproc) {
-    micStreamUnproc.getTracks().forEach(t => t.stop());
-    micStreamUnproc = null;
-    try { micStream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-    catch (e) { micStream = null; }
-  }
-
-  // 2本目の取得で無加工側が止められていないか確認
-  if (micStreamUnproc && !streamLive(micStreamUnproc)) {
-    micStreamUnproc.getTracks().forEach(t => t.stop());
-    micStreamUnproc = null;
-  }
-
-  micDiag = {
-    dualStream: !!(micStream && micStreamUnproc),
-    processed:  micTrackSettings(micStream),
-    unprocessed: micTrackSettings(micStreamUnproc)
-  };
+  micDiag = { processed: micTrackSettings(micStream) };
   return !!micStream;
+}
+
+// 加工あり→解放→無加工の順に単独で測り、iOSが制約を尊重するかを切り分ける。
+async function measureMicLevel(constraints, seconds) {
+  let stream = null, ctx = null;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: constraints });
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const an = ctx.createAnalyser();
+    an.fftSize = 1024;
+    ctx.createMediaStreamSource(stream).connect(an);
+    const buf = new Float32Array(an.fftSize);
+    const vals = [];
+    await new Promise(done => {
+      const iv = setInterval(() => {
+        an.getFloatTimeDomainData(buf);
+        vals.push(rms(Array.from(buf)));
+      }, 100);
+      setTimeout(() => { clearInterval(iv); done(); }, seconds * 1000);
+    });
+    return { level: trimmedRms(vals), samples: vals.length, settings: micTrackSettings(stream) };
+  } catch (e) {
+    return { error: e.name || String(e) };
+  } finally {
+    if (ctx)    try { await ctx.close(); } catch (e) {}
+    if (stream) stream.getTracks().forEach(t => t.stop());
+  }
+}
+
+let diagRunning = false;
+async function runMicDiagnostic() {
+  if (diagRunning) return;
+  diagRunning = true;
+  const box = el('mic-diag-result');
+  const set = h => box.innerHTML = h;
+
+  set('<span style="color:var(--accent)">① 加工あり 10秒 計測中...</span>');
+  const proc = await measureMicLevel(true, 10);
+  if (proc.error) { set(`<span style="color:var(--red)">マイクを取得できません（${proc.error}）</span>`); diagRunning = false; return; }
+
+  set('<span style="color:var(--accent)">オーディオセッション解放中...</span>');
+  await new Promise(r => setTimeout(r, 1500));
+
+  set('<span style="color:var(--accent)">② 無加工 10秒 計測中...</span>');
+  const unp = await measureMicLevel(
+    { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, 10);
+  if (unp.error) { set(`<span style="color:var(--red)">無加工ストリームを取得できません（${unp.error}）</span>`); diagRunning = false; return; }
+
+  const MIN_LEVEL = 1e-5;
+  const ratio = proc.level > 0 ? unp.level / proc.level : 0;
+  let cls, msg;
+  if (proc.samples < 20 || unp.samples < 20) {
+    cls = 'ng'; msg = '❌ サンプルを取得できませんでした。もう一度実行してください。';
+  } else if (proc.level < MIN_LEVEL || unp.level < MIN_LEVEL) {
+    // 0付近では倍率が1から離れるため、成功と誤判定しないよう先に弾く
+    cls = 'ng'; msg = '⚠️ 音量が低すぎて判定できません。エンジンをかけた状態で再実行してください。';
+  } else if (Math.abs(ratio - 1) > 0.05) {
+    cls = 'ok'; msg = '✅ 単独なら制約が効いています。次回オイル交換時に無加工へ切り替え可能です。';
+  } else {
+    cls = 'ng'; msg = '❌ 倍率がほぼ1.000です。iOSは制約自体を無視しており、Web Audioでの無加工取得はできません。';
+  }
+  set(`
+    <div class="diag-row"><span>① 加工あり</span><b>${proc.level.toFixed(6)}</b></div>
+    <div class="diag-row"><span>② 無加工</span><b>${unp.level.toFixed(6)}</b></div>
+    <div class="diag-row"><span>倍率 ②/①</span><b>${ratio.toFixed(3)}</b></div>
+    <div class="diag-verdict ${cls}">${msg}</div>
+    <div class="field-hint">エンジンをかけた状態で実行した結果のみ有効です。静かな室内では両者とも低い値になり判別できません。</div>
+  `);
+  diagRunning = false;
 }
 
 function startNoiseCapture() {
   noiseSamples = [];
   noiseSpecAccum = null; noiseSpecCount = 0; audioSampleRate = null;
-  noiseSamplesUnproc = []; noiseSpecAccumUnproc = null; noiseSpecCountUnproc = 0;
   if (!micStream) return;
   try {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -834,25 +886,6 @@ function startNoiseCapture() {
     const freqBuf = new Float32Array(spectrumAnalyser.frequencyBinCount);
     noiseSpecAccum = new Float64Array(spectrumAnalyser.frequencyBinCount);
 
-    let bufU = null, freqBufU = null;
-    if (micStreamUnproc) {
-      try {
-        const srcU = audioCtx.createMediaStreamSource(micStreamUnproc);
-        analyserUnproc = audioCtx.createAnalyser();
-        analyserUnproc.fftSize = 1024;
-        srcU.connect(analyserUnproc);
-
-        spectrumAnalyserUnproc = audioCtx.createAnalyser();
-        spectrumAnalyserUnproc.fftSize = NOISE_FFT_SIZE;
-        spectrumAnalyserUnproc.smoothingTimeConstant = 0;
-        srcU.connect(spectrumAnalyserUnproc);
-
-        bufU     = new Float32Array(analyserUnproc.fftSize);
-        freqBufU = new Float32Array(spectrumAnalyserUnproc.frequencyBinCount);
-        noiseSpecAccumUnproc = new Float64Array(spectrumAnalyserUnproc.frequencyBinCount);
-      } catch (e) { analyserUnproc = null; spectrumAnalyserUnproc = null; }
-    }
-
     noiseInterval = setInterval(() => {
       analyserNode.getFloatTimeDomainData(buf);
       noiseSamples.push(rms(Array.from(buf)));
@@ -863,17 +896,6 @@ function startNoiseCapture() {
         if (isFinite(v)) noiseSpecAccum[i] += Math.pow(10, v / 10);
       }
       noiseSpecCount++;
-
-      if (analyserUnproc) {
-        analyserUnproc.getFloatTimeDomainData(bufU);
-        noiseSamplesUnproc.push(rms(Array.from(bufU)));
-        spectrumAnalyserUnproc.getFloatFrequencyData(freqBufU);
-        for (let i = 0; i < freqBufU.length; i++) {
-          const v = freqBufU[i];
-          if (isFinite(v)) noiseSpecAccumUnproc[i] += Math.pow(10, v / 10);
-        }
-        noiseSpecCountUnproc++;
-      }
     }, 100);
   } catch (e) { /* noise capture unavailable on this device */ }
 }
@@ -882,11 +904,8 @@ function stopNoiseCapture() {
   if (noiseInterval) { clearInterval(noiseInterval); noiseInterval = null; }
   if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
   if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
-  if (micStreamUnproc) { micStreamUnproc.getTracks().forEach(t => t.stop()); micStreamUnproc = null; }
   analyserNode = null;
   spectrumAnalyser = null;
-  analyserUnproc = null;
-  spectrumAnalyserUnproc = null;
 }
 
 function radioVal(name) { const c = document.querySelector(`input[name="${name}"]:checked`); return c ? c.value : null; }
@@ -969,8 +988,6 @@ function finishRecording() {
   const fs = elapsedSec > 0 ? samples.length / elapsedSec : null;
   const vibSpectrum = buildVibSpectrum(samples, fs);
   const noiseSpectrum = buildNoiseSpectrum(noiseSpecAccum, noiseSpecCount);
-  const noiseSpectrumUnproc = buildNoiseSpectrum(noiseSpecAccumUnproc, noiseSpecCountUnproc);
-  const noiseLevelUnproc = noiseSamplesUnproc.length ? trimmedRms(noiseSamplesUnproc) : null;
   const peakHz = vibSpectrum ? vibSpectrum.peakHz : null;
 
   const rec = {
@@ -993,14 +1010,11 @@ function finishRecording() {
     device: collectDeviceMeta(),
     vibSpectrum: vibSpectrum,
     noiseSpectrum: noiseSpectrum,
-    noiseLevelUnproc: noiseLevelUnproc,
-    noiseSpectrumUnproc: noiseSpectrumUnproc,
     micDiag: micDiag,
     vibPeakHz: peakHz,
     estimatedRpm: peakHz != null ? Math.round(peakHz * 60) : null,
     rawSamples: samples.slice(),
-    rawNoiseSamples: noiseSamples.slice(),
-    rawNoiseSamplesUnproc: noiseSamplesUnproc.slice()
+    rawNoiseSamples: noiseSamples.slice()
   };
 
   let recs = getRecords();
@@ -1024,13 +1038,6 @@ function finishRecording() {
   if (rec.sampleRateHz) specParts.push(`サンプルレート ${rec.sampleRateHz} Hz`);
   if (peakHz != null)   specParts.push(`振動ピーク ${peakHz} Hz（≒${rec.estimatedRpm} rpm）`);
   specParts.push(noiseSpectrum ? 'ノイズスペクトル 32バンド記録' : 'ノイズスペクトル 未取得');
-  if (noiseLevelUnproc != null) {
-    const s = micDiag && micDiag.unprocessed;
-    const applied = s && s.autoGainControl === false && s.noiseSuppression === false;
-    specParts.push(`🎙️ 無加工ノイズ ${noiseLevelUnproc.toFixed(5)}${applied ? '（AGC/NS解除を確認）' : '（※加工解除が効いていない可能性）'}`);
-  } else {
-    specParts.push('🎙️ 無加工ノイズ 取得不可（この端末は同時2ストリーム非対応）');
-  }
   el('res-spec').textContent = specParts.join(' ／ ');
 
   const baselines = getBaselines();
@@ -1138,7 +1145,6 @@ function toRow(rec) {
     memo: rec.memo || null,
     rms: rec.rms,
     noise_level: rec.noiseLevel ?? null,
-    noise_level_unproc: rec.noiseLevelUnproc ?? null,
     sample_count: rec.samples ?? null,
     duration_sec: rec.durationSec ?? null,
     sample_rate_hz: rec.sampleRateHz ?? null,
@@ -1147,7 +1153,6 @@ function toRow(rec) {
     estimated_rpm: rec.estimatedRpm ?? null,
     vib_spectrum: rec.vibSpectrum || null,
     noise_spectrum: rec.noiseSpectrum || null,
-    noise_spectrum_unproc: rec.noiseSpectrumUnproc || null,
     mic_diag: rec.micDiag || null
   };
   // 生データは交換直後の記録のみ送る（容量対策）
@@ -1156,7 +1161,6 @@ function toRow(rec) {
     const r7 = a => a ? a.map(v => +v.toFixed(7)) : null;
     row.raw_samples              = r5(rec.rawSamples);
     row.raw_noise_samples        = r7(rec.rawNoiseSamples);
-    row.raw_noise_samples_unproc = r7(rec.rawNoiseSamplesUnproc);
   }
   return row;
 }
@@ -1303,14 +1307,11 @@ function downloadRawData(id) {
     device: rec.device || null,
     vibSpectrum: rec.vibSpectrum || null,
     noiseSpectrum: rec.noiseSpectrum || null,
-    noiseLevelUnproc: rec.noiseLevelUnproc ?? null,
-    noiseSpectrumUnproc: rec.noiseSpectrumUnproc || null,
     micDiag: rec.micDiag || null,
     vibPeakHz: rec.vibPeakHz ?? null,
     estimatedRpm: rec.estimatedRpm ?? null,
     rawVibrationSamples: rec.rawSamples,
-    rawNoiseSamples: rec.rawNoiseSamples || [],
-    rawNoiseSamplesUnproc: rec.rawNoiseSamplesUnproc || []
+    rawNoiseSamples: rec.rawNoiseSamples || []
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
