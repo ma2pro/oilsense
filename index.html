@@ -399,7 +399,7 @@
     <div class="chip active" id="chip-engine_room" onclick="toggleChip('engine_room')"><span class="chip-dot" style="background:var(--pos-engine)"></span>🔧 エンジンルーム</div>
   </div>
 
-  <div class="chart-legend-note">⭐大きい点＝オイル交換直後の計測</div>
+  <div class="chart-legend-note" id="chart-legend-note">⭐大きい点＝オイル交換直後の計測</div>
 
   <div id="chart-empty" class="empty">
     <div class="empty-icon">📭</div>
@@ -550,8 +550,8 @@ const DURATION  = 30;
 const NUM_BARS  = 14;
 const RAW_KEEP_COUNT = 10;
 
-const APP_VERSION    = 'v4';
-const MIC_PROCESSING = 'processed';
+const APP_VERSION    = 'v5';
+const MIC_PROCESSING = 'unprocessed';
 const VIB_NFFT       = 256;
 const NOISE_FFT_SIZE = 4096;
 const NOISE_BANDS    = 32;
@@ -785,12 +785,16 @@ function streamLive(stream) {
 // iOSのオーディオセッションは端末に1つで、処理モードが全ストリームに一括適用される。
 // 加工あり／無加工を同時に持つことはできない（2本立ては実機で失敗、倍率1.000）。
 // 逐次比較は runMicDiagnostic() で行う。
+// 単独ストリームならiOSも制約を尊重する（診断実測: 倍率0.167 ＝ AGCが約6倍のゲインを
+// かけていた）。v4までの noise_level は AGC 正規化後の値で、水準が異なるため比較不可。
 async function ensureMicPermission() {
   micStream = null; micDiag = null;
   try {
-    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    micStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+    });
   } catch (e) { micStream = null; }
-  micDiag = { processed: micTrackSettings(micStream) };
+  micDiag = { requested: 'unprocessed', applied: micTrackSettings(micStream) };
   return !!micStream;
 }
 
@@ -1038,6 +1042,7 @@ function finishRecording() {
   if (rec.sampleRateHz) specParts.push(`サンプルレート ${rec.sampleRateHz} Hz`);
   if (peakHz != null)   specParts.push(`振動ピーク ${peakHz} Hz（≒${rec.estimatedRpm} rpm）`);
   specParts.push(noiseSpectrum ? 'ノイズスペクトル 32バンド記録' : 'ノイズスペクトル 未取得');
+  if (noiseLevel != null) specParts.push('🎙️ 無加工マイク（v4以前とは水準が異なります）');
   el('res-spec').textContent = specParts.join(' ／ ');
 
   const baselines = getBaselines();
@@ -1235,6 +1240,10 @@ function acceptConsent() {
   startRecording();
 }
 
+// v4以前は AGC/ノイズ抑制が有効なまま測っており、v5以降とは水準が異なる
+function micMode(r)  { return r.micProcessing === 'unprocessed' ? 'unprocessed' : 'processed'; }
+function micLabel(r) { return micMode(r) === 'unprocessed' ? '🎙️ 無加工' : '🎙️ 加工あり'; }
+
 function oilLabel(oil) {
   if (!oil) return null;
   const head = [oil.viscosity, oil.brand].filter(Boolean).join(' · ');
@@ -1425,6 +1434,7 @@ function refreshHistory() {
       `${pos.icon} ${pos.label}`,
       r.justChanged ? '🆕 交換直後' : null,
       r.noiseLevel != null ? `🔊 ${r.noiseLevel.toFixed(4)}` : null,
+      r.noiseLevel != null ? micLabel(r) : null,
       oilLab ? `🛢️ ${oilLab.head}` : null,
       r.estimatedRpm ? `⚙️ ${r.estimatedRpm} rpm` : null,
       r.uploadedAt ? '☁️ 送信済' : null
@@ -1515,21 +1525,43 @@ function renderChart() {
   svg += `<text x="${padL}" y="${H - 6}" font-size="7" fill="#8899bb">${xLabel(xMin)}</text>`;
   svg += `<text x="${W - padR}" y="${H - 6}" font-size="7" fill="#8899bb" text-anchor="end">${xLabel(xMax)}</text>`;
 
+  const byMic = chartMetric === 'noise';
   POS.forEach(p => {
     if (!chartVisible[p.key]) return;
     const pts = all.filter(r => r.phonePos === p.key).sort((a,b) => xVal(a) - xVal(b));
     if (!pts.length) return;
-    const poly = pts.map(r => `${sx(xVal(r))},${sy(getY(r))}`).join(' ');
-    svg += `<polyline points="${poly}" fill="none" stroke="${p.hex}" stroke-width="1.5" opacity="0.7"/>`;
+
+    // ノイズは v4以前(AGC有効)と v5以降(無加工)で水準が違う。線を繋ぐと
+    // 連続した変化に見えてしまうため、測定方法ごとに分けて描く
+    const groups = byMic
+      ? [['processed',   pts.filter(r => micMode(r) === 'processed')],
+         ['unprocessed', pts.filter(r => micMode(r) === 'unprocessed')]]
+      : [['all', pts]];
+
+    groups.forEach(([mode, gp]) => {
+      if (gp.length < 2) return;
+      const old = byMic && mode === 'processed';
+      const poly = gp.map(r => `${sx(xVal(r))},${sy(getY(r))}`).join(' ');
+      svg += `<polyline points="${poly}" fill="none" stroke="${p.hex}" stroke-width="1.5"`
+           + ` opacity="${old ? 0.28 : 0.7}"${old ? ' stroke-dasharray="3,3"' : ''}/>`;
+    });
+
     pts.forEach(r => {
       const cx = sx(xVal(r)), cy = sy(getY(r));
+      const old = byMic && micMode(r) === 'processed';
+      const op = old ? ' opacity="0.35"' : '';
       svg += r.justChanged
-        ? `<circle cx="${cx}" cy="${cy}" r="6" fill="${p.hex}" stroke="#fff" stroke-width="2"/>`
-        : `<circle cx="${cx}" cy="${cy}" r="3.5" fill="${p.hex}"/>`;
+        ? `<circle cx="${cx}" cy="${cy}" r="6" fill="${p.hex}" stroke="#fff" stroke-width="2"${op}/>`
+        : `<circle cx="${cx}" cy="${cy}" r="3.5" fill="${p.hex}"${op}/>`;
     });
   });
   svg += `</svg>`;
   wrap.innerHTML = svg;
+
+  const nOld = byMic ? all.filter(r => micMode(r) === 'processed').length : 0;
+  el('chart-legend-note').innerHTML = byMic
+    ? `⭐大きい点＝オイル交換直後　／　<span style="opacity:.55">点線・淡色＝v4以前の加工ありマイク（${nOld}件・AGC正規化のため比較不可）</span>`
+    : '⭐大きい点＝オイル交換直後の計測';
 }
 
 function loadCarSettings() {
