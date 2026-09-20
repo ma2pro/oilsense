@@ -85,12 +85,6 @@
     .input-unit { font-size: 12px; color: var(--text2); padding-bottom: 11px; white-space: nowrap; }
     .field-hint { font-size: 10px; color: var(--text2); margin-top: 5px; }
     .select-input { appearance: none; -moz-appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--text2) 50%), linear-gradient(135deg, var(--text2) 50%, transparent 50%); background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 30px; }
-    .diag-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--rule, var(--border)); }
-    .diag-row b { font-variant-numeric: tabular-nums; color: var(--accent); }
-    .diag-verdict { margin-top: 10px; padding: 9px 11px; border-radius: 7px; font-size: 12px; line-height: 1.6; }
-    .diag-verdict.ok { background: rgba(102,187,106,.12); border: 1px solid rgba(102,187,106,.4); color: var(--green); }
-    .diag-verdict.ng { background: rgba(244,67,54,.10);  border: 1px solid rgba(244,67,54,.35);  color: #ff8a80; }
-
     .oil-sum { font-size: 13px; color: var(--text); font-weight: 600; }
     .oil-sum .unset { color: var(--text2); font-weight: 400; }
     .oil-sum .sub { display: block; font-size: 11px; color: var(--text2); font-weight: 400; margin-top: 3px; }
@@ -416,24 +410,6 @@
   <div class="note">車両情報を登録しておくと履歴が見やすくなります。変更は自動保存されます。</div>
 
   <div class="card">
-    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <span>☁️ データ送信状況</span>
-      <button class="small-btn" onclick="syncPending(false)">今すぐ送信</button>
-    </div>
-    <div id="sync-status" style="font-size:12.5px;"></div>
-    <div class="field-hint" style="margin-top:8px;">🔒 データは匿名化して送信しています。氏名・連絡先・位置情報・車両ナンバーは送信していません。</div>
-  </div>
-
-  <div class="card">
-    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <span>🎤 マイク無加工取得の診断</span>
-      <button class="small-btn" onclick="runMicDiagnostic()">実行</button>
-    </div>
-    <div class="field-hint" style="margin-bottom:8px;">加工あり10秒 → 無加工10秒を順に測り、iOSが音声処理の解除に対応しているかを判定します（約22秒）。<b>エンジンをかけた状態で実行してください。</b>記録には残りません。</div>
-    <div id="mic-diag-result" style="font-size:12.5px;"></div>
-  </div>
-
-  <div class="card">
     <div class="card-title">車両情報</div>
     <div class="settings-row">
       <div class="input-group"><div class="input-label">メーカー</div><input type="text" class="text-input" id="car-maker" placeholder="例: トヨタ" oninput="autoSaveCar()"></div>
@@ -443,6 +419,15 @@
       <div class="input-group"><div class="input-label">年式</div><input type="number" class="text-input" id="car-year" placeholder="2020" inputmode="numeric" oninput="autoSaveCar()"></div>
       <div class="input-group"><div class="input-label">記録開始時の走行距離 (km)</div><input type="number" class="text-input" id="car-odo" placeholder="50000" inputmode="numeric" oninput="autoSaveCar()"></div>
     </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span>☁️ データ送信状況</span>
+      <button class="small-btn" onclick="syncPending(false)">今すぐ送信</button>
+    </div>
+    <div id="sync-status" style="font-size:12.5px;"></div>
+    <div class="field-hint" style="margin-top:8px;">🔒 データは匿名化して送信しています。氏名・連絡先・位置情報・車両ナンバーは送信していません。</div>
   </div>
 
   <div class="card">
@@ -778,15 +763,13 @@ function micTrackSettings(stream) {
     readyState:       t.readyState
   };
 }
-function streamLive(stream) {
-  return !!stream && stream.getAudioTracks().some(t => t.readyState === 'live');
-}
-
 // iOSのオーディオセッションは端末に1つで、処理モードが全ストリームに一括適用される。
 // 加工あり／無加工を同時に持つことはできない（2本立ては実機で失敗、倍率1.000）。
 // 逐次比較は runMicDiagnostic() で行う。
-// 単独ストリームならiOSも制約を尊重する（診断実測: 倍率0.167 ＝ AGCが約6倍のゲインを
-// かけていた）。v4までの noise_level は AGC 正規化後の値で、水準が異なるため比較不可。
+// 単独ストリームならiOSも制約を尊重する。逐次比較での実測は倍率0.167で、
+// AGCが約6倍のゲインをかけていた。同時2ストリームでは処理モードがセッション
+// 全体に一括適用されるため分離できない。
+// v4までの noise_level は AGC 正規化後の値で、水準が異なるため比較不可。
 async function ensureMicPermission() {
   micStream = null; micDiag = null;
   try {
@@ -796,75 +779,6 @@ async function ensureMicPermission() {
   } catch (e) { micStream = null; }
   micDiag = { requested: 'unprocessed', applied: micTrackSettings(micStream) };
   return !!micStream;
-}
-
-// 加工あり→解放→無加工の順に単独で測り、iOSが制約を尊重するかを切り分ける。
-async function measureMicLevel(constraints, seconds) {
-  let stream = null, ctx = null;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: constraints });
-    ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const an = ctx.createAnalyser();
-    an.fftSize = 1024;
-    ctx.createMediaStreamSource(stream).connect(an);
-    const buf = new Float32Array(an.fftSize);
-    const vals = [];
-    await new Promise(done => {
-      const iv = setInterval(() => {
-        an.getFloatTimeDomainData(buf);
-        vals.push(rms(Array.from(buf)));
-      }, 100);
-      setTimeout(() => { clearInterval(iv); done(); }, seconds * 1000);
-    });
-    return { level: trimmedRms(vals), samples: vals.length, settings: micTrackSettings(stream) };
-  } catch (e) {
-    return { error: e.name || String(e) };
-  } finally {
-    if (ctx)    try { await ctx.close(); } catch (e) {}
-    if (stream) stream.getTracks().forEach(t => t.stop());
-  }
-}
-
-let diagRunning = false;
-async function runMicDiagnostic() {
-  if (diagRunning) return;
-  diagRunning = true;
-  const box = el('mic-diag-result');
-  const set = h => box.innerHTML = h;
-
-  set('<span style="color:var(--accent)">① 加工あり 10秒 計測中...</span>');
-  const proc = await measureMicLevel(true, 10);
-  if (proc.error) { set(`<span style="color:var(--red)">マイクを取得できません（${proc.error}）</span>`); diagRunning = false; return; }
-
-  set('<span style="color:var(--accent)">オーディオセッション解放中...</span>');
-  await new Promise(r => setTimeout(r, 1500));
-
-  set('<span style="color:var(--accent)">② 無加工 10秒 計測中...</span>');
-  const unp = await measureMicLevel(
-    { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, 10);
-  if (unp.error) { set(`<span style="color:var(--red)">無加工ストリームを取得できません（${unp.error}）</span>`); diagRunning = false; return; }
-
-  const MIN_LEVEL = 1e-5;
-  const ratio = proc.level > 0 ? unp.level / proc.level : 0;
-  let cls, msg;
-  if (proc.samples < 20 || unp.samples < 20) {
-    cls = 'ng'; msg = '❌ サンプルを取得できませんでした。もう一度実行してください。';
-  } else if (proc.level < MIN_LEVEL || unp.level < MIN_LEVEL) {
-    // 0付近では倍率が1から離れるため、成功と誤判定しないよう先に弾く
-    cls = 'ng'; msg = '⚠️ 音量が低すぎて判定できません。エンジンをかけた状態で再実行してください。';
-  } else if (Math.abs(ratio - 1) > 0.05) {
-    cls = 'ok'; msg = '✅ 単独なら制約が効いています。次回オイル交換時に無加工へ切り替え可能です。';
-  } else {
-    cls = 'ng'; msg = '❌ 倍率がほぼ1.000です。iOSは制約自体を無視しており、Web Audioでの無加工取得はできません。';
-  }
-  set(`
-    <div class="diag-row"><span>① 加工あり</span><b>${proc.level.toFixed(6)}</b></div>
-    <div class="diag-row"><span>② 無加工</span><b>${unp.level.toFixed(6)}</b></div>
-    <div class="diag-row"><span>倍率 ②/①</span><b>${ratio.toFixed(3)}</b></div>
-    <div class="diag-verdict ${cls}">${msg}</div>
-    <div class="field-hint">エンジンをかけた状態で実行した結果のみ有効です。静かな室内では両者とも低い値になり判別できません。</div>
-  `);
-  diagRunning = false;
 }
 
 function startNoiseCapture() {
