@@ -1,4 +1,4 @@
-const CACHE = 'oilsense-v8';
+const CACHE = 'oilsense-v9';
 const ASSETS = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', e => {

@@ -85,6 +85,9 @@
     .input-unit { font-size: 12px; color: var(--text2); padding-bottom: 11px; white-space: nowrap; }
     .field-hint { font-size: 10px; color: var(--text2); margin-top: 5px; }
     .select-input { appearance: none; -moz-appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--text2) 50%), linear-gradient(135deg, var(--text2) 50%, transparent 50%); background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 30px; }
+    .sync-err { margin-top: 9px; padding: 9px 11px; border-radius: 7px; background: rgba(239,108,0,.10); border: 1px solid rgba(239,108,0,.35); color: #ffb74d; font-size: 11.5px; line-height: 1.6; }
+    .sync-err-at { display: block; color: var(--text2); font-size: 10.5px; margin-top: 4px; }
+
     .oil-sum { font-size: 13px; color: var(--text); font-weight: 600; }
     .oil-sum .unset { color: var(--text2); font-weight: 400; }
     .oil-sum .sub { display: block; font-size: 11px; color: var(--text2); font-weight: 400; margin-top: 3px; }
@@ -344,6 +347,7 @@
       </div>
       <div class="field-hint" id="res-spec" style="margin-top:10px;"></div>
       <div class="field-hint" id="res-hint" style="margin-top:6px;"></div>
+      <div id="res-upload" style="margin-top:8px;font-size:11.5px;"></div>
     </div>
   </div>
 
@@ -977,7 +981,16 @@ function finishRecording() {
 
   el('rec-justchanged').checked = false;
   updateOdoHint();
-  syncPending();
+
+  el('res-upload').innerHTML = getConsent()
+    ? '<span style="color:var(--text2)">☁️ 送信中...</span>' : '';
+  syncPending().then(() => {
+    if (!getConsent()) return;
+    const e = getSyncError();
+    el('res-upload').innerHTML = e
+      ? `<span style="color:#ffb74d">⚠️ 送信できませんでした：${escapeHtml(e.msg)}<br>記録は端末に保存済みです。復帰後に自動で再送されます。</span>`
+      : '<span style="color:var(--green)">☁️ サーバーへ送信しました</span>';
+  });
 }
 
 function cancelMeasurement() {
@@ -1109,24 +1122,51 @@ function markUploaded(id) {
   localStorage.setItem('oilsense_records', JSON.stringify(recs));
 }
 
+// 送信失敗の理由をユーザーに見せるための分類。自動送信は黙って失敗するため、
+// 原因が分からないまま未送信が溜まる事故を防ぐ。
+function describeSyncError(e) {
+  const m = String((e && e.message) || e);
+  // iOS Safari は "Load failed"、Chrome は "Failed to fetch"
+  if (/Failed to fetch|NetworkError|Load failed|ERR_/i.test(m)) {
+    return 'サーバーに接続できません。オフラインか、サーバーが休止している可能性があります';
+  }
+  const code = (m.match(/^(\d{3})/) || [])[1];
+  if (!code) return m.slice(0, 90);
+  if (code === '401' || code === '403') return `認証エラー（${code}）。APIキーか権限設定の確認が必要です`;
+  if (code === '404') return `送信先が見つかりません（404）`;
+  if (code[0] === '5')  return `サーバー側エラー（${code}）。時間をおいて再試行されます`;
+  return `送信エラー（${code}）`;
+}
+
+function getSyncError() { try { return JSON.parse(localStorage.getItem('oilsense_sync_error') || 'null'); } catch { return null; } }
+function setSyncError(msg) {
+  if (msg) localStorage.setItem('oilsense_sync_error', JSON.stringify({ msg, at: new Date().toISOString() }));
+  else     localStorage.removeItem('oilsense_sync_error');
+}
+
 let syncing = false;
 async function syncPending(silent = true) {
   if (syncing || !getConsent()) return 0;
   const pending = getRecords().filter(r => !r.uploadedAt);
-  if (!pending.length) { if (!silent) showToast('✅ 未送信データはありません'); return 0; }
-  if (navigator.onLine === false) { if (!silent) showToast('⚠️ オフラインです'); return 0; }
+  if (!pending.length) { setSyncError(null); renderSyncStatus(); if (!silent) showToast('✅ 未送信データはありません'); return 0; }
+  if (navigator.onLine === false) {
+    setSyncError('端末がオフラインです'); renderSyncStatus();
+    if (!silent) showToast('⚠️ オフラインです');
+    return 0;
+  }
 
   syncing = true;
   let ok = 0, failed = null;
   for (const rec of pending) {
     try { await uploadRecord(rec); markUploaded(rec.id); ok++; }
-    catch (e) { failed = e.message; break; }
+    catch (e) { failed = describeSyncError(e); break; }
   }
   syncing = false;
 
+  setSyncError(failed);
   if (ok) refreshHistory();
   if (!silent) {
-    if (failed) showToast(`⚠️ ${ok}件送信、残りは後で再試行します`);
+    if (failed) showToast(ok ? `⚠️ ${ok}件送信、残りは失敗` : '⚠️ 送信できませんでした');
     else        showToast(`☁️ ${ok}件を送信しました`);
   }
   renderSyncStatus();
@@ -1140,9 +1180,13 @@ function renderSyncStatus() {
   const recs = getRecords();
   const done = recs.filter(r => r.uploadedAt).length;
   const left = recs.length - done;
+  const err  = left ? getSyncError() : null;
   box.innerHTML = `<span>☁️ 送信済み <b>${done}</b> 件`
     + (left ? ` ／ <span style="color:#ffa726">未送信 <b>${left}</b> 件</span>` : '')
-    + `</span>`;
+    + `</span>`
+    + (err ? `<div class="sync-err">⚠️ ${escapeHtml(err.msg)}`
+           + `<span class="sync-err-at">最終試行 ${fmtDate(new Date(err.at))}</span>`
+           + `<span class="sync-err-at">記録は端末に保持されています。復帰後に自動で再送されます。</span></div>` : '');
 }
 
 function showConsentModal() { el('consent-modal').style.display = 'flex'; }
