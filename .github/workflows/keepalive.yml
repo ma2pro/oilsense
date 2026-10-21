@@ -1,0 +1,53 @@
+#
+# Supabase の無料プロジェクトは一定期間アクセスがないと自動休止する。
+# 計測が週1回程度だと休止条件の境界に入り、実際に2026-09-20〜10-14 と
+# 10-14〜10-21 の2回、送信が止まった。
+#
+# RLS により anon は SELECT を持たないのでこのリクエストは 401 を返すが、
+# レスポンスに Postgres のエラーコード 42501 (insufficient_privilege) が
+# 含まれることを確認済みで、クエリは DB まで到達している。データは
+# 一切読み書きしない。
+#
+# 失敗時はジョブを失敗させる。GitHub から通知が届くので、休止や障害に
+# 気づくための監視も兼ねる。
+#
+name: Supabase keepalive
+
+on:
+  schedule:
+    # 毎日 03:17 UTC（日本時間 12:17）。休止閾値に対して十分な余裕をとる。
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST
+        env:
+          # 公開鍵（Publishable key）。RLS で INSERT のみ許可しており、
+          # 露出しても他人のデータは読めず消せない。秘密情報ではない。
+          SUPABASE_URL: https://plignoxmvvrvktygqowu.supabase.co
+          SUPABASE_KEY: sb_publishable_qTsNo2hG56DmfLw_LEZSNQ_uLNNfyNA
+        run: |
+          set -u
+          URL="${SUPABASE_URL}/rest/v1/records?select=id&limit=1"
+          code=000
+          for attempt in 1 2 3; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 25 \
+                     -H "apikey: ${SUPABASE_KEY}" \
+                     -H "Authorization: Bearer ${SUPABASE_KEY}" \
+                     "$URL" || echo 000)
+            echo "attempt ${attempt}: HTTP ${code}"
+            # 401 = RLS が SELECT を拒否した正常応答（＝プロジェクト稼働中）
+            if [ "$code" = "401" ] || [ "$code" = "200" ]; then
+              echo "Supabase project is awake."
+              exit 0
+            fi
+            [ "$attempt" -lt 3 ] && sleep 30
+          done
+          echo "::error::Supabase に到達できません（最終 HTTP ${code}）。プロジェクトが休止した可能性があります: ${SUPABASE_URL}"
+          exit 1
